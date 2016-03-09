@@ -71,8 +71,14 @@ to ktrans.
 for more information on the use of `ktrans.exe` to the relevant Fanuc Robotics
 manuals.
 
+See also [rossum][].
+
 
 ## Future improvements
 
 This tool might be migrated to a C/C++ implementation to avoid the overhead of
 starting the Python interpreter.
+
+
+
+[rossum]: https://github.com/gavanderhoorn/rossum
