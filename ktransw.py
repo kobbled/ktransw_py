@@ -41,6 +41,8 @@ def main():
 
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose',
         help='Print (lots of) debug information')
+    parser.add_argument('-q', '--quiet', action='store_true', dest='quiet',
+        help='Print nothing, except when ktrans encounters an error')
     parser.add_argument('-d', '--dry-run', action='store_true', dest='dry_run',
         help='Do everything except copying files and starting ktrans')
     parser.add_argument('-k', '--keep-build-dir', action='store_true',
@@ -157,7 +159,16 @@ def main():
 
     ktrans_ret = 0
     if not args.dry_run:
-        ktrans_ret = subprocess.call(ktrans_cmdline, cwd=build_dir)
+        # save ktrans output ..
+        process = subprocess.Popen(ktrans_cmdline, cwd=build_dir,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        (pstdout, _) = process.communicate()
+        ktrans_ret = process.returncode
+
+        # .. but print only on error or if we're not quiet
+        if (ktrans_ret < 0) or not args.quiet or args.verbose:
+            # TODO: we loose stdout/stderr interleaving here
+            sys.stdout.write(pstdout)
     #else:
         #logger.debug("Not calling ktrans: dry run requested")
 
