@@ -23,7 +23,7 @@ import subprocess
 
 
 def main():
-    KTRANSW_VERSION='0.0.1'
+    KTRANSW_VERSION='0.0.8'
     KTRANS_BIN_NAME='ktrans.exe'
 
     description=("Version {0}\n\n"

@@ -1,5 +1,5 @@
 # ktransw
-v0.0.1
+v0.0.8
 
 A wrapper around Fanuc Robotics' command-line Karel translator (`ktrans.exe`)
 that fakes support for multiple include paths by running `ktrans` from a
@@ -36,7 +36,7 @@ line option with each invocation.
 ```
 usage: ktransw [-h] [-v] [-d] [-k] [--ktrans PATH] [-I PATH] [ARG [ARG ...]]
 
-Version 0.0.1
+Version 0.0.8
 
 A wrapper around Fanuc Robotics' command-line Karel translator (ktrans.exe)
 that fakes support for multiple include paths by running ktrans.exe from a
