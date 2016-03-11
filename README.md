@@ -50,6 +50,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -v, --verbose         Print (lots of) debug information
+  -q, --quiet           Print nothing, except when ktrans encounters an error
   -d, --dry-run         Do everything except copying files and starting ktrans
   -k, --keep-build-dir  Don't delete the temporary build directory on exit
   --ktrans PATH         Location of ktrans (by default ktransw assumes it's on
