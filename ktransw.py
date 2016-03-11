@@ -80,6 +80,17 @@ def main():
     #logger.debug("Setting ktrans path to: {0}".format(ktrans_path))
 
 
+    # bit of a kludge, but we assume:
+    #
+    #  1. args always start with a forward-slash
+    #  2. things starting with a 'V' or 'v' are core version identifiers
+    #  3. everything else is a (potentially relative) path
+    #
+    # everything in category 3 is made absolute.
+    for i in range(0, len(args.ktrans_args)):
+        if (args.ktrans_args[i][0] != '/') and (args.ktrans_args[i][0] != 'V') and (args.ktrans_args[i][0] != 'v'):
+            args.ktrans_args[i] = os.path.abspath(args.ktrans_args[i])
+
     #logger.debug("Parsed args:")
     #for key, val in vars(args).iteritems():
     #    if type(val) == list:
