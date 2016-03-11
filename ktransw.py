@@ -106,7 +106,9 @@ def main():
     ktrans_cmdline = "{0} {1}".format(ktrans_path, ktrans_cmdlargs)
 
     # avoid creating a build dir if we don't need it
-    needs_buildd = any(['.kl' in arg for arg in args.ktrans_args])
+    # TODO: this is brittle: ktrans.exe does not require source files to have
+    #       an '.kl' extension at all.
+    needs_buildd = '.kl' in ktrans_cmdlargs
     #logger.debug("{0} a build dir".format("Needs" if needs_buildd else "Doesn't need"))
 
     # if we're not translating anything, exit early
