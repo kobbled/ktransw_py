@@ -132,6 +132,11 @@ def main():
     # copy contents of include dirs to it
     seen = []
     for include_dir in args.include_dirs:
+        # silently ignore non-existent paths
+        if not os.path.exists(include_dir):
+            #logger.debug("Include path {0} does not exist, ignoring".format(include_dir))
+            continue
+
         # avoid copying dirs with the same name
         # TODO: should we merge them instead? Probably slower.
         if include_dir in seen:
