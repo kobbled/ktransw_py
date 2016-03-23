@@ -25,6 +25,7 @@ import subprocess
 def main():
     KTRANSW_VERSION='0.0.8'
     KTRANS_BIN_NAME='ktrans.exe'
+    _OS_EX_DATAERR=65
 
     description=("Version {0}\n\n"
         "A wrapper around Fanuc Robotics' command-line Karel translator "
@@ -45,6 +46,21 @@ def main():
         help='Print nothing, except when ktrans encounters an error')
     parser.add_argument('-d', '--dry-run', action='store_true', dest='dry_run',
         help='Do everything except copying files and starting ktrans')
+
+    parser.add_argument('-M', action='store_true', dest='dep_output',
+        help='Output GCC compatible dependency file')
+    parser.add_argument('-MM', action='store_true', dest='ignore_syshdrs',
+        help="Like '-M', but don't include system headers")
+    parser.add_argument('-MT', type=str, dest='dep_target', metavar='target',
+        help="Change the target of the rule emitted by dependency generation "
+            "(default: base name of source, with object extension (.pc))")
+    parser.add_argument('-MF', type=str, dest='dep_fname', metavar='file',
+        help="When used with -M or -MM, specifies a file to write the "
+            "dependencies to.")
+    parser.add_argument('-MG', action='store_true', dest='ignore_missing_hdrs',
+        help="Assume missing header files are generated files and add them "
+            "to the dependency list without raising an error")
+
     parser.add_argument('-k', '--keep-build-dir', action='store_true',
         dest='keep_buildd', help="Don't delete the temporary build directory "
         "on exit")
@@ -63,6 +79,8 @@ def main():
             sys.argv[i] = sys.argv[i].replace('/I', '-I', 1)
     args = parser.parse_args()
 
+    KL_SUFFIX = '.kl'
+    PCODE_SUFFIX = '.pc'
 
     # configure the logger
     #FMT='%(levelname)-8s | %(message)s'
@@ -107,10 +125,72 @@ def main():
     ktrans_cmdlargs = ' '.join(args.ktrans_args)
     ktrans_cmdline = "{0} {1}".format(ktrans_path, ktrans_cmdlargs)
 
+
+    # see if we just need to output dependency info
+    if (args.dep_output or args.ignore_syshdrs) and (KL_SUFFIX in ktrans_cmdlargs):
+        # assume there's only one input source file (or: we ignore all others)
+        kl_file = [arg for arg in args.ktrans_args if arg.endswith('.kl')][0]
+        #logger.debug("Dependency output for {0}".format(kl_file))
+
+        incs = get_includes(kl_file)
+        #logger.debug("Found {0} includes".format(len(incs)))
+
+        # make sure everything ends in the right suffix
+        for i in range(0, len(incs)):
+            if not incs[i].endswith(KL_SUFFIX):
+                incs[i] = incs[i] + KL_SUFFIX
+
+        # target name we use is 'base source file name + .pc', OR the name
+        # provided as a command line arg
+        target = os.path.basename(os.path.splitext(kl_file)[0]) + PCODE_SUFFIX
+        if args.dep_target:
+            target = args.dep_target
+
+        # resolve all relative includes to their respective include directories
+        deps = []
+        for hdr in incs:
+            if args.ignore_syshdrs and is_system_header(hdr):
+                #logger.debug("Ignoring system header '{0}'".format(hdr))
+                continue
+
+            # all non-absolute paths are headers we need to find first
+            hdr_path = hdr
+            if not os.path.isabs(hdr_path):
+                try:
+                    hdr_dir = find_hdr_in_incdirs(hdr_path, args.include_dirs)
+
+                    # make relative headers absolute by prefixing it with the
+                    # location we found it in
+                    hdr_path = os.path.join(hdr_dir, hdr_path)
+                    #logger.debug("Found {0} in '{1}'".format(hdr, hdr_dir))
+
+                except ValueError, e:
+                    if not args.ignore_missing_hdrs:
+                        # we were not asked to ignore this, so exit with an error
+                        sys.stderr.write("fatal error: {0}: No such file or directory\n".format(hdr))
+                        sys.exit(_OS_EX_DATAERR)
+
+            #logger.debug("Adding {0} to dependencies".format(hdr_path))
+            deps.append(hdr_path)
+
+        dep_lines = "{0} : {1}\n".format(target, ' \\\n\t'.join([dep for dep in deps]))
+
+        # write out dependency file
+        if args.dep_fname:
+            with open(args.dep_fname, 'w') as outf:
+                outf.write(dep_lines)
+        # or to stdout
+        else:
+            sys.stdout.write(dep_lines)
+
+        # done
+        sys.exit(0)
+
+
     # avoid creating a build dir if we don't need it
     # TODO: this is brittle: ktrans.exe does not require source files to have
     #       an '.kl' extension at all.
-    needs_buildd = '.kl' in ktrans_cmdlargs
+    needs_buildd = KL_SUFFIX in ktrans_cmdlargs
     #logger.debug("{0} a build dir".format("Needs" if needs_buildd else "Doesn't need"))
 
     # if we're not translating anything, exit early
@@ -185,6 +265,49 @@ def main():
 
     # let caller know what ktrans did
     sys.exit(ktrans_ret)
+
+
+def get_includes(fname):
+    import re
+    with open(fname, 'r') as fd:
+        source = fd.read()
+        matches = re.findall(r'^%INCLUDE (.*)$', source, re.MULTILINE)
+        return matches or []
+
+
+def is_system_header(header):
+    # list of 'system headers' for V7.70-1
+    return header in [
+        "iosetup.kl",
+        "kldctptx.kl",
+        "kldcutil.kl",
+        "klersys.kl",
+        "klerxmlf.kl",
+        "klevaxdf.kl",
+        "klevccdf.kl",
+        "klevkeys.kl",
+        "klevkmsk.kl",
+        "klevksp.kl",
+        "klevtpe.kl",
+        "klevutil.kl",
+        "kliosop.kl",
+        "kliotyps.kl",
+        "kliouop.kl",
+        "klrdread.kl",
+        "klrdutil.kl",
+        "kluifdir.kl",
+        "passcons.kl",
+        "ppedef.kl",
+        "runform.kl",
+        "sledef.kl"
+    ]
+
+
+def find_hdr_in_incdirs(header, include_dirs):
+    for include_dir in include_dirs:
+        if os.path.exists(os.path.join(include_dir, header)):
+            return include_dir
+    raise ValueError()
 
 
 if __name__ == '__main__':
