@@ -2,9 +2,9 @@
 v0.1.0
 
 A wrapper around Fanuc Robotics' command-line Karel translator (`ktrans.exe`)
-that fakes support for multiple include paths by running `ktrans` from a
-temporary directory containing a copy of the contents of the specified include
-paths.
+that makes it work a little more like a modern compiler by adding some missing
+functionality (like support for multiple include paths and dependency file
+generation).
 
 
 ## Requirements
@@ -17,10 +17,10 @@ related libraries) is also needed.
 
 ## Installation
 
-Clone this repository to your machine and add the directory containing
-`ktransw.py` and `ktransw.cmd` to your `PATH`. Command sessions opened after
-setting up the `PATH` should be able to successfully run `ktransw` from
-anywhere.
+Clone this repository to your machine (or download any of the [releases][])
+and add the directory containing `ktransw.py` and `ktransw.cmd` to your `PATH`.
+Command sessions opened after setting up the `PATH` should be able to
+successfully run `ktransw` from anywhere.
 
 Alternatively, don't change your `PATH`, but start `ktransw` by specifying
 the full path on the command line.
@@ -94,4 +94,5 @@ starting the Python interpreter.
 
 
 
+[releases]: https://github.com/gavanderhoorn/ktransw_py/releases
 [rossum]: https://github.com/gavanderhoorn/rossum
