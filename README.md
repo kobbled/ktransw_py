@@ -87,10 +87,49 @@ manuals.
 See also [rossum][].
 
 
+## FAQ
+
+#### Does this run on Windows?
+Yes, it only runs on Windows, actually.
+
+#### Is Roboguide (still) needed?
+`ktransw` only wraps `ktrans.exe`, it does not replace it or Roboguide, so
+depending on your project's requirements (is it Karel only? Do you need to
+translate TP programs, etc), yes, you still need Roboguide.
+
+#### This is not a solution, it looks more like a work around?
+Well, yes, true. That is also stated in the *Overview* section. `ktrans.exe` is
+developed by Fanuc, and I don't have any special access to it, nor to any
+other parts of Roboguide or related infrastructure. This means we'll have to
+make do with what we have.
+
+If you know of a better work-around (or even a real solution), please contact
+me.
+
+#### How about backwards compatibility with non-ktransw users?
+There are two situations to consider: manually invoking `ktrans.exe` on the
+command line, and compiling Karel sources in Roboguide.
+
+As for Roboguide: it actually supports multiple include paths natively, so all
+that would be needed to be able to translate the sources would be to add the
+`include` directory to a workcell's *include path*. This can easily be
+done by selecting the *Set Extra Includes* option from the *Cell Browser*
+context-menu. See the Roboguide help for more information.
+
+When not using Roboguide, just copy the directory *inside* the `include`
+directory to your project directory. Compilation should now work as usual.
+
+
 ## Future improvements
 
 This tool might be migrated to a C/C++ implementation to avoid the overhead of
 starting the Python interpreter.
+
+
+## Disclaimer
+
+WinOLPC, OlpcPRO and Roboguide are products of Fanuc America Corporation. The
+author of `ktransw` is not affiliated with Fanuc in any way.
 
 
 
