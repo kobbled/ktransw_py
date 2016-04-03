@@ -60,6 +60,9 @@ def main():
     parser.add_argument('-MG', action='store_true', dest='ignore_missing_hdrs',
         help="Assume missing header files are generated files and add them "
             "to the dependency list without raising an error")
+    parser.add_argument('-MP', action='store_true', dest='add_phony_tgt_for_deps',
+        help="Add a phony target for each dependency to support renaming "
+            "dependencies without having to update the Makefile to match")
 
     parser.add_argument('-k', '--keep-build-dir', action='store_true',
         dest='keep_buildd', help="Don't delete the temporary build directory "
@@ -174,6 +177,9 @@ def main():
             deps.append(hdr_path)
 
         dep_lines = "{0} : {1}\n".format(target, ' \\\n\t'.join([dep for dep in deps]))
+
+        if args.add_phony_tgt_for_deps:
+            dep_lines += '\n'.join(['{0}:'.format(dep) for dep in deps]) + '\n'
 
         # write out dependency file
         if args.dep_fname:

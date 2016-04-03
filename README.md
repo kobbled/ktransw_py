@@ -35,7 +35,7 @@ line option with each invocation.
 
 ```
 usage: ktransw [-h] [-v] [-q] [-d] [-M] [-MM] [-MT target] [-MF file] [-MG]
-               [-k] [--ktrans PATH] [-I PATH]
+               [-MP] [-k] [--ktrans PATH] [-I PATH]
                [ARG [ARG ...]]
 
 Version 0.1.0
@@ -64,6 +64,9 @@ optional arguments:
   -MG                   Assume missing header files are generated files and
                         add them to the dependency list without raising an
                         error
+  -MP                   Add a phony target for each dependency to support
+                        renaming dependencies without having to update the
+                        Makefile to match
   -k, --keep-build-dir  Don't delete the temporary build directory on exit
   --ktrans PATH         Location of ktrans (by default ktransw assumes it's on
                         the Windows PATH)
