@@ -122,6 +122,23 @@ context-menu. See the Roboguide help for more information.
 When not using Roboguide, just copy the directory *inside* the `include`
 directory to your project directory. Compilation should now work as usual.
 
+#### I let A include B, which includes C. A also include C. Now I get errors
+As `ktrans` doesn't support the concept of *include guards*, it's impossible
+to protect against multiple inclusion of the same header (or of any file that
+gets included: Karel doesn't really have a header concept). In practice this
+means that anything that is intended to be included in something else (ie:
+headers or code fragments) cannot themselves `%INCLUDE` something, or they
+run the risk of introducing redefinition errors into the program they are
+included in.
+
+A current work-around is to delegate the responsibility of including the
+required headers to *top-level* artefacts (such as programs), but those will
+have to do a recursive `%INCLUDE` of all headers required for all dependencies,
+*and their dependencies*.
+
+[issue 7][] asks for the inclusion of a pre-processor, which would allow to use
+include guards to avoid multiple inclusion.
+
 
 ## Future improvements
 
@@ -138,3 +155,4 @@ author of `ktransw` is not affiliated with Fanuc in any way.
 
 [releases]: https://github.com/gavanderhoorn/ktransw_py/releases
 [rossum]: https://github.com/gavanderhoorn/rossum
+[issue 7]: https://github.com/gavanderhoorn/ktransw_py/issues/7
