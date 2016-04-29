@@ -26,7 +26,7 @@ Alternatively, don't change your `PATH`, but start `ktransw` by specifying
 the full path on the command line.
 
 For maximum convenience, make sure that `ktrans.exe` is also on the `PATH`.
-`ktransw` does not try to locate `ktrans.exe` on it's own, so if it is not
+`ktransw` does not try to locate `ktrans.exe` on its own, so if it is not
 on the `PATH`, its location must be provided by using the `--ktrans` command
 line option with each invocation.
 
