@@ -135,7 +135,7 @@ def main():
         kl_file = [arg for arg in args.ktrans_args if arg.endswith('.kl')][0]
         #logger.debug("Dependency output for {0}".format(kl_file))
 
-        incs = get_includes(kl_file)
+        incs = get_includes_from_file(kl_file)
         #logger.debug("Found {0} includes".format(len(incs)))
 
         # make sure everything ends in the right suffix
@@ -273,12 +273,16 @@ def main():
     sys.exit(ktrans_ret)
 
 
-def get_includes(fname):
+def scan_for_inc_stmts(text):
     import re
+    matches = re.findall(r'^.*%INCLUDE\s+(\S+).*$', text, re.MULTILINE)
+    return matches or []
+
+
+def get_includes_from_file(fname):
     with open(fname, 'r') as fd:
         source = fd.read()
-        matches = re.findall(r'^%INCLUDE (.*)$', source, re.MULTILINE)
-        return matches or []
+        return scan_for_inc_stmts(source)
 
 
 def is_system_header(header):
