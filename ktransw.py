@@ -275,7 +275,7 @@ def main():
 
 def scan_for_inc_stmts(text):
     import re
-    matches = re.findall(r'^.*%INCLUDE\s+(\S+).*$', text, re.MULTILINE)
+    matches = re.findall(r'^(?!\s*--)\s*%INCLUDE\s+(\S+).*$', text, re.MULTILINE)
     return matches or []
 
 

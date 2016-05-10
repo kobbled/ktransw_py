@@ -105,6 +105,22 @@ def test_comments():
     assert len(incs) == 1
     assert inc_path in incs
 
+    inc_path = 'baz.h'
+    incs = scan_for_inc_stmts('--%INCLUDE ' + inc_path + ' -- this is a comment')
+    assert len(incs) == 0
+
+    inc_path = 'baz.h'
+    incs = scan_for_inc_stmts('--    %INCLUDE ' + inc_path)
+    assert len(incs) == 0
+
+    inc_path = 'baz.h'
+    incs = scan_for_inc_stmts('    -- %INCLUDE ' + inc_path)
+    assert len(incs) == 0
+
+    inc_path = 'baz.h'
+    incs = scan_for_inc_stmts('\t  \t   -- %INCLUDE ' + inc_path)
+    assert len(incs) == 0
+
 
 def test_multiple_lines():
     inc_paths = ['foo.h', 'bar.th']
@@ -114,5 +130,13 @@ def test_multiple_lines():
 
     inc_paths = ['foo.h', 'bar.th', 'long_filename_with_underscores.h.hh', r'some\nested\path\and_underscore.kl']
     incs = scan_for_inc_stmts('\n'.join(['  \t\n\t%INCLUDE ' + p + ' -- this is a comment' for p in inc_paths]))
+    assert len(incs) == len(inc_paths)
+    assert inc_paths <= incs and inc_paths >= incs
+
+    inc_paths = ['foo.h', 'bar.th']
+    inc_stmts = ['%INCLUDE ' + p for p in inc_paths]
+    inc_stmts.extend(['--%INCLUDE baz.th', '--%INCLUDE baz2.th -- another comment'])
+    inc_stmts.extend(['-- %INCLUDE baz.th', ' \t  --%INCLUDE baz2.th'])
+    incs = scan_for_inc_stmts('\n'.join(inc_stmts))
     assert len(incs) == len(inc_paths)
     assert inc_paths <= incs and inc_paths >= incs
