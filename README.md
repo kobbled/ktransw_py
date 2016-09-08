@@ -1,5 +1,5 @@
 # ktransw
-v0.1.2
+v0.1.99
 
 A wrapper around Fanuc Robotics' command-line Karel translator (`ktrans.exe`)
 that makes it work a little more like a modern compiler by adding some missing
@@ -13,6 +13,9 @@ generation).
 
 The script itself doesn't do any translation, so a copy of `ktrans.exe` (and
 related libraries) is also needed.
+
+Finally, pre-processing is handled by a patched version of Tristan Miller's
+GPP (the "Generic PreProcessor").
 
 
 ## Installation
@@ -30,47 +33,49 @@ For maximum convenience, make sure that `ktrans.exe` is also on the `PATH`.
 on the `PATH`, its location must be provided by using the `--ktrans` command
 line option with each invocation.
 
+Download the latest binary release from [gpp releases][], and place it on
+the `PATH`. If `gpp.exe` cannot be placed on the path, the `--gpp` command
+line option may be used to tell `ktransw` where it is.
+
 
 ## Usage
 
 ```
 usage: ktransw [-h] [-v] [-q] [-d] [-M] [-MM] [-MT target] [-MF file] [-MG]
-               [-MP] [-k] [--ktrans PATH] [-I PATH]
+               [-MP] [--ktrans PATH] [--gpp PATH] [-I PATH]
                [ARG [ARG ...]]
 
-Version 0.1.2
+Version 0.1.99
 
 A wrapper around Fanuc Robotics' command-line Karel translator (ktrans.exe)
-that fakes support for multiple include paths by running ktrans.exe from a
-temporary directory containing a copy of the contents of the specified
-include paths.
+that adds a C-like preprocessor, support for multiple include directories,
+conditional compilation, include guards and macros.
 
 positional arguments:
   ARG                   Arguments to pass on to ktrans. Use normal (forward-
                         slash) notation here
 
 optional arguments:
-  -h, --help            show this help message and exit
-  -v, --verbose         Print (lots of) debug information
-  -q, --quiet           Print nothing, except when ktrans encounters an error
-  -d, --dry-run         Do everything except copying files and starting ktrans
-  -M                    Output GCC compatible dependency file
-  -MM                   Like '-M', but don't include system headers
-  -MT target            Change the target of the rule emitted by dependency
-                        generation (default: base name of source, with object
-                        extension (.pc))
-  -MF file              When used with -M or -MM, specifies a file to write
-                        the dependencies to.
-  -MG                   Assume missing header files are generated files and
-                        add them to the dependency list without raising an
-                        error
-  -MP                   Add a phony target for each dependency to support
-                        renaming dependencies without having to update the
-                        Makefile to match
-  -k, --keep-build-dir  Don't delete the temporary build directory on exit
-  --ktrans PATH         Location of ktrans (by default ktransw assumes it's on
-                        the Windows PATH)
-  -I PATH               Include paths (multiple allowed)
+  -h, --help     show this help message and exit
+  -v, --verbose  Print (lots of) debug information
+  -q, --quiet    Print nothing, except when ktrans encounters an error
+  -d, --dry-run  Do nothing, except checking parameters
+  -M             Output GCC compatible dependency file
+  -MM            Like '-M', but don't include system headers
+  -MT target     Change the target of the rule emitted by dependency
+                 generation (default: base name of source, with object
+                 extension (.pc))
+  -MF file       When used with -M or -MM, specifies a file to write the
+                 dependencies to.
+  -MG            Assume missing header files are generated files and add them
+                 to the dependency list without raising an error
+  -MP            Add a phony target for each dependency to support renaming
+                 dependencies without having to update the Makefile to match
+  --ktrans PATH  Location of ktrans (by default ktransw assumes it's on the
+                 Windows PATH)
+  --gpp PATH     Location of gpp (by default ktransw assumes it's on the
+                 Windows PATH)
+  -I PATH        Include paths (multiple allowed)
 
 Example invocation:
 
@@ -83,11 +88,17 @@ to ktrans.
 
 ## Examples
 
+### As ktrans stand-in
+
 `ktransw` is supposed to be a transparent wrapper around `ktrans.exe`. Refer
 for more information on the use of `ktrans.exe` to the relevant Fanuc Robotics
 manuals.
 
 See also [rossum][].
+
+### Using the pre-processor
+
+See the [gpp documentation][] for more information.
 
 
 ## FAQ
@@ -95,55 +106,48 @@ See also [rossum][].
 #### Does this run on Windows?
 Yes, it only runs on Windows, actually.
 
+If you know of a way to run `ktrans.exe` under Linux, I'd be interested.
+
 #### Is Roboguide (still) needed?
 `ktransw` only wraps `ktrans.exe`, it does not replace it or Roboguide, so
 depending on your project's requirements (is it Karel only? Do you need to
 translate TP programs, etc), yes, you still need Roboguide.
 
-#### This is not a solution, it looks more like a work around?
-Well, yes, true. That is also stated in the *Overview* section. `ktrans.exe` is
-developed by Fanuc, and I don't have any special access to it, nor to any
-other parts of Roboguide or related infrastructure. This means we'll have to
-make do with what we have.
+#### What about backwards compatibility with non-ktransw users?
+Backwards compatibility is currently not guaranteed, as the functionality
+provided by the pre-processor cannot be duplicated by plain `ktrans`. With
+care, avoiding multiple inclusions of the same file would be possible, but
+that would seriously hamper the development of stand-alone, re-usable
+libraries (as the including entity would be made responsible for tracking
+includes and making sure that all required definitions are available at
+translation time).
 
-If you know of a better work-around (or even a real solution), please contact
-me.
-
-#### How about backwards compatibility with non-ktransw users?
-There are two situations to consider: manually invoking `ktrans.exe` on the
-command line, and compiling Karel sources in Roboguide.
-
-As for Roboguide: it actually supports multiple include paths natively, so all
-that would be needed to be able to translate the sources would be to add the
-`include` directory to a workcell's *include path*. This can easily be
-done by selecting the *Set Extra Includes* option from the *Cell Browser*
-context-menu. See the Roboguide help for more information.
-
-When not using Roboguide, just copy the directory *inside* the `include`
-directory to your project directory. Compilation should now work as usual.
+In cases where plain `ktrans` must be used, it should be possible to use
+`ktransw`s `-E` command line option: this will make `ktransw` only pre-process
+the input file, without doing any translation. The resulting output is a
+completely flattened file, without any pre-processor directives. `ktrans` and
+Roboguide should be able to translate this.
 
 #### I let A include B, which includes C. A also include C. Now I get errors
-As `ktrans` doesn't support the concept of *include guards*, it's impossible
-to protect against multiple inclusion of the same header (or of any file that
-gets included: Karel doesn't really have a header concept). In practice this
-means that anything that is intended to be included in something else (ie:
-headers or code fragments) cannot themselves `%INCLUDE` something, or they
-run the risk of introducing redefinition errors into the program they are
-included in.
+Make sure to include the appropriate *include guards*, to avoid problems with
+multiple inclusion of headers. The pre-processor supports the typical `%IFNDEF`,
+`%DEFINE`, `%ENDIF` pattern as is common in C/C++ headers. Either wrap
+`%INCLUDE` directives in such conditionals, or add them to the respective
+headers.
 
-A current work-around is to delegate the responsibility of including the
-required headers to *top-level* artefacts (such as programs), but those will
-have to do a recursive `%INCLUDE` of all headers required for all dependencies,
-*and their dependencies*.
-
-[issue 7][] asks for the inclusion of a pre-processor, which would allow to use
-include guards to avoid multiple inclusion.
+For headers that cannot be changed (or are not supposed to be changed) -- such
+as the headers in the Fanuc supplied support directories -- wrapping `%INCLUDE`
+directives is recommended.
 
 
 ## Future improvements
 
 This tool might be migrated to a C/C++ implementation to avoid the overhead of
 starting the Python interpreter.
+
+Backward compatibility with plain `ktrans` would be nice to restore. A
+carefully chosen notation for the new pre-processor directives might allow
+for this.
 
 
 ## Disclaimer
@@ -154,5 +158,6 @@ author of `ktransw` is not affiliated with Fanuc in any way.
 
 
 [releases]: https://github.com/gavanderhoorn/ktransw_py/releases
+[gpp releases]: https://github.com/gavanderhoorn/gpp/releases
 [rossum]: https://github.com/gavanderhoorn/rossum
-[issue 7]: https://github.com/gavanderhoorn/ktransw_py/issues/7
+[gpp documentation]: https://logological.org/gpp
