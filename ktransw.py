@@ -384,14 +384,16 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs):
         '""',       # the list of characters to stack for argument balancing
         '""',       # and the list of characters to unstack
 
-        '+c',       # Specify comments
-        '"--"',     # the beginning of a comment
-        '"\\n"',    # end of comment
+        # TODO: somehow line endings get screwed up with this
+        #'+c',       # Specify comments
+        #'"--"',     # the beginning of a comment
+        #'"\\n"',    # end of comment
 
-        '+s',       # Specify strings
-        '"\'"',     # the beginning of a string
-        '"\'"',     # the end of a string
-        '""'        # string-quote character (escapes embedded string chars)
+        # TODO: somehow line endings get screwed up with this
+        #'+s',       # Specify strings
+        #'"\'"',     # the beginning of a string
+        #'"\'"',     # the end of a string
+        #'""'        # string-quote character (escapes embedded string chars)
     ]
 
     # append include dirs we got from caller
