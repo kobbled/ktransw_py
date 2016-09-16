@@ -69,6 +69,9 @@ def main():
         help="Add a phony target for each dependency to support renaming "
             "dependencies without having to update the Makefile to match")
 
+    parser.add_argument('-k', '--keep-build-dir', action='store_true',
+        dest='keep_buildd', help="Don't delete the temporary build directory "
+            "on exit")
     parser.add_argument('--ktrans', type=str, dest='ktrans_path', metavar='PATH',
         help="Location of ktrans (by default ktransw assumes it's on the "
             "Windows PATH)")
@@ -226,7 +229,7 @@ def main():
     # create temporary directory to store preprocessed file in. We
     # avoid problems with temporary files (via NamedTemporaryFile fi) being
     # not readable by other processes in this way.
-    with TemporaryDirectory(prefix='ktransw-', suffix='-buildd') as dname:
+    with TemporaryDirectory(prefix='ktransw-', suffix='-buildd', do_clean=(not args.keep_buildd)) as dname:
         # unfortunately we need to create a temporary file to store the
         # preprocessed KAREL source in, as ktrans doesn't support reading
         # from stdin.
@@ -364,6 +367,9 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs):
 
         '+z',       # Set text mode to Unix mode (LF terminator)
 
+        '--includemarker "-- INCLUDE_MARKER %:%:%"',
+                    # line:file:op
+
         '-U',       # User-defined mode
         '""',       # the macro start sequence
         '""',       # the macro end sequence for a call without arguments
@@ -413,9 +419,10 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs):
 
 class TemporaryDirectory(object):
     # http://stackoverflow.com/a/19299884
-    def __init__(self, suffix="", prefix="tmp", dir=None):
+    def __init__(self, suffix="", prefix="tmp", dir=None, do_clean=True):
         from tempfile import mkdtemp
         self._closed = False
+        self._do_clean = do_clean
         self.name = None
         self.name = mkdtemp(suffix, prefix, dir)
 
@@ -426,7 +433,7 @@ class TemporaryDirectory(object):
         return self.name
 
     def cleanup(self, _warn=False):
-        if self.name and not self._closed:
+        if self.name and not self._closed and self._do_clean:
             try:
                 self._rmtree(self.name)
             except (TypeError, AttributeError) as ex:
