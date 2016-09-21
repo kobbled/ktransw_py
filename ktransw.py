@@ -139,69 +139,6 @@ def main():
     kl_files = [arg for arg in args.ktrans_args if arg.endswith(KL_SUFFIX)]
 
 
-    # see if we just need to output dependency info
-    if (args.dep_output or args.ignore_syshdrs) and (len(kl_files) > 0):
-        # assume there's only one input source file (or: we ignore all others)
-        kl_file = kl_files[0]
-        logger.debug("Dependency output for {0}".format(kl_file))
-
-        incs = get_includes_from_file(kl_file)
-        logger.debug("Found {0} includes".format(len(incs)))
-
-        # make sure everything ends in the right suffix
-        # XXX: no longer needed with gpp
-        #for i in range(0, len(incs)):
-        #    if not incs[i].endswith(KL_SUFFIX):
-        #        incs[i] = incs[i] + KL_SUFFIX
-
-        # target name we use is 'base source file name + .pc', OR the name
-        # provided as a command line arg
-        target = args.dep_target or os.path.basename(os.path.splitext(kl_file)[0]) + PCODE_SUFFIX
-
-        # resolve all relative includes to their respective include directories
-        deps = []
-        for hdr in incs:
-            if args.ignore_syshdrs and is_system_header(hdr):
-                logger.debug("Ignoring system header '{0}'".format(hdr))
-                continue
-
-            # all non-absolute paths are headers we need to find first
-            hdr_path = hdr
-            if not os.path.isabs(hdr_path):
-                try:
-                    hdr_dir = find_hdr_in_incdirs(hdr_path, args.include_dirs)
-
-                    # make relative header absolute by prefixing it with the
-                    # location we found it in
-                    hdr_path = os.path.join(hdr_dir, hdr_path)
-                    logger.debug("Found {0} in '{1}'".format(hdr, hdr_dir))
-
-                except ValueError, e:
-                    if not args.ignore_missing_hdrs:
-                        # we were not asked to ignore this, so exit with an error
-                        sys.stderr.write("ktransw: fatal error: {0}: No such file or directory\n".format(hdr))
-                        sys.exit(_OS_EX_DATAERR)
-
-            logger.debug("Adding {0} to dependencies".format(hdr_path))
-            deps.append(hdr_path)
-
-        dep_lines = "{0} : {1}\n".format(target, ' \\\n\t'.join([dep for dep in deps]))
-
-        if args.add_phony_tgt_for_deps:
-            dep_lines += '\n'.join(['{0}:'.format(dep) for dep in deps]) + '\n'
-
-        # write out dependency file
-        if args.dep_fname:
-            with open(args.dep_fname, 'w') as outf:
-                outf.write(dep_lines)
-        # or to stdout
-        else:
-            sys.stdout.write(dep_lines)
-
-        # done
-        sys.exit(0)
-
-
     # avoid running a build if we don't need it
     needs_build = len(kl_files) > 0
     logger.debug("{0} a build".format("Needs" if needs_build else "Doesn't need"))
@@ -269,7 +206,61 @@ def main():
             sys.exit(gpp_proc.returncode)
 
 
-        # pre-processing done, get ktrans to translate the intermediary file
+        # pre-processing done
+
+
+        # see if we need to output dependency info
+        if (args.dep_output or args.ignore_syshdrs):
+            # use original filename for logging
+            logger.debug("Dependency output for {0}".format(kl_file))
+
+            # but scan the GPP output for include markers
+            incs = get_includes_from_file(fname)
+            logger.debug("Found {0} includes".format(len(incs)))
+
+            # target name we use is 'base source file name + .pc', OR the name
+            # provided as a command line arg
+            target = args.dep_target or os.path.basename(os.path.splitext(kl_file)[0]) + PCODE_SUFFIX
+
+            # resolve all relative includes to their respective include directories
+            deps = []
+            for hdr in incs:
+                if args.ignore_syshdrs and is_system_header(hdr):
+                    logger.debug("Ignoring system header '{0}'".format(hdr))
+                    continue
+
+                # all non-absolute paths are headers we need to find first
+                hdr_path = hdr
+                if not os.path.isabs(hdr_path):
+                    try:
+                        hdr_dir = find_hdr_in_incdirs(hdr_path, args.include_dirs)
+
+                        # make relative header absolute by prefixing it with the
+                        # location we found it in
+                        hdr_path = os.path.join(hdr_dir, hdr_path)
+                        logger.debug("Found {0} in '{1}'".format(hdr, hdr_dir))
+
+                    except ValueError, e:
+                        if not args.ignore_missing_hdrs:
+                            # we were not asked to ignore this, so exit with an error
+                            sys.stderr.write("ktransw: fatal error: {0}: No such file or directory\n".format(hdr))
+                            sys.exit(_OS_EX_DATAERR)
+
+                logger.debug("Adding {0} to dependencies".format(hdr_path))
+                deps.append(hdr_path)
+
+            dep_lines = "{0} : {1}\n".format(target, ' \\\n\t'.join([dep for dep in deps]))
+
+            if args.add_phony_tgt_for_deps:
+                dep_lines += '\n'.join(['{0}:'.format(dep) for dep in deps]) + '\n'
+
+            # write out dependency file
+            if args.dep_fname:
+                with open(args.dep_fname, 'w') as outf:
+                    outf.write(dep_lines)
+            # or to stdout
+            else:
+                sys.stdout.write(dep_lines)
 
 
         # replace user specified source file with the preprocessed one
@@ -310,9 +301,15 @@ def get_includes_from_file(fname):
         return scan_for_inc_stmts(source)
 
 
+GPP_OP_ENTER='1'
+GPP_OP_EXIT='2'
 def scan_for_inc_stmts(text):
-    matches = re.findall(r'^(?!\s*--)\s*%INCLUDE\s+(\S+).*$', text, re.MULTILINE)
-    return matches or []
+    matches = re.findall(r'^-- INCLUDE_MARKER (\d+):(\S+):(\d+|)', text, re.MULTILINE)
+    incs = []
+    for (line_nr, fpath, op) in matches:
+        if (op == GPP_OP_ENTER) and (fpath not in incs):
+            incs.append(fpath)
+    return incs
 
 
 def is_system_header(header):
