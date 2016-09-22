@@ -137,9 +137,11 @@ multiple inclusion of headers. The pre-processor supports the typical `%IFNDEF`,
 `%INCLUDE` directives in such conditionals, or add them to the respective
 headers.
 
-For headers that cannot be changed (or are not supposed to be changed) -- such
-as the headers in the Fanuc supplied support directories -- wrapping `%INCLUDE`
-directives is recommended.
+For headers that cannot be changed (or are not supposed to be changed),
+wrapping `%INCLUDE` directives is recommended.
+
+(for the headers distributed by Fanuc in the support directories (kliotyps.kl
+and friends), see the [fr_hdrs][] convenience package)
 
 
 ## Future improvements
@@ -163,3 +165,4 @@ author of `ktransw` is not affiliated with Fanuc in any way.
 [gpp releases]: https://github.com/gavanderhoorn/gpp/releases
 [rossum]: https://github.com/gavanderhoorn/rossum
 [gpp documentation]: https://logological.org/gpp
+[fr_hdrs]: https://github.com/gavanderhoorn/fr_hdrs
