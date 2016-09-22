@@ -220,7 +220,8 @@ def main():
 
             # target name we use is 'base source file name + .pc', OR the name
             # provided as a command line arg
-            target = args.dep_target or os.path.basename(os.path.splitext(kl_file)[0]) + PCODE_SUFFIX
+            base_source_name = os.path.basename(os.path.splitext(kl_file)[0])
+            target = args.dep_target or (base_source_name + PCODE_SUFFIX)
 
             # resolve all relative includes to their respective include directories
             deps = []
