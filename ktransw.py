@@ -287,22 +287,21 @@ def main():
         # NOTE: we remap stderr to stdout as ktrans doesn't use those
         # consistently (ie: uses stderr when it should use stdout and
         # vice versa)
-        process = subprocess.Popen(ktrans_cmdline, stdout=subprocess.PIPE,
+        ktrans_proc = subprocess.Popen(ktrans_cmdline, stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT)
-        (pstdout, _) = process.communicate()
+        (pstdout, _) = ktrans_proc.communicate()
 
         # let caller know how we did
-        logger.debug("End of ktrans, ret: {0}".format(process.returncode))
+        logger.debug("End of ktrans, ret: {0}".format(ktrans_proc.returncode))
 
         # print ktrans output only on error or if we're not quiet
-        if (process.returncode != 0) or (not args.quiet) or args.verbose:
+        if (ktrans_proc.returncode != 0) or (not args.quiet) or args.verbose:
             # TODO: we loose stdout/stderr interleaving here
             # TODO: the error messages refer to lines in the temporary,
             # preprocessed KAREL source file, not the original one.
             sys.stdout.write(pstdout.replace(dname, os.path.dirname(kl_file)) + '\n')
 
-        logger.debug("End of ktrans, ret: {0}".format(process.returncode))
-        sys.exit(process.returncode)
+        sys.exit(ktrans_proc.returncode)
 
 
 def get_includes_from_file(fname):
