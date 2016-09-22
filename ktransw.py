@@ -25,7 +25,7 @@ import re
 
 
 def main():
-    KTRANSW_VERSION='0.1.99'
+    KTRANSW_VERSION='0.2.0'
     KTRANS_BIN_NAME='ktrans.exe'
     GPP_BIN_NAME='gpp.exe'
     _OS_EX_DATAERR=65
