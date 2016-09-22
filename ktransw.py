@@ -52,6 +52,8 @@ def main():
     parser.add_argument('-d', '--dry-run', action='store_true', dest='dry_run',
         help='Do nothing, except checking parameters')
 
+    parser.add_argument('-E', action='store_true', dest='output_ppd_source',
+        help="Preprocess only; do not translate")
     parser.add_argument('-M', action='store_true', dest='dep_output',
         help='Output GCC compatible dependency file')
     parser.add_argument('-MM', action='store_true', dest='ignore_syshdrs',
@@ -262,6 +264,13 @@ def main():
             # or to stdout
             else:
                 sys.stdout.write(dep_lines)
+
+
+        # output only pre-processed source if user asked for that
+        if args.output_ppd_source:
+            with open(fname, 'r') as inf:
+                sys.stdout.write(inf.read())
+            sys.exit(0)
 
 
         # replace user specified source file with the preprocessed one
