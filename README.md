@@ -41,41 +41,43 @@ line option may be used to tell `ktransw` where it is.
 ## Usage
 
 ```
-usage: ktransw [-h] [-v] [-q] [-d] [-M] [-MM] [-MT target] [-MF file] [-MG]
-               [-MP] [--ktrans PATH] [--gpp PATH] [-I PATH]
+usage: ktransw [-h] [-v] [-q] [-d] [-E] [-M] [-MM] [-MT target] [-MF file]
+               [-MG] [-MP] [--ktrans PATH] [--gpp PATH] [-I PATH]
                [ARG [ARG ...]]
 
 Version 0.1.99
 
 A wrapper around Fanuc Robotics' command-line Karel translator (ktrans.exe)
 that adds a C-like preprocessor, support for multiple include directories,
-conditional compilation, include guards and macros.
+conditional compilation, include guards, macros and more.
 
 positional arguments:
   ARG                   Arguments to pass on to ktrans. Use normal (forward-
                         slash) notation here
 
 optional arguments:
-  -h, --help     show this help message and exit
-  -v, --verbose  Print (lots of) debug information
-  -q, --quiet    Print nothing, except when ktrans encounters an error
-  -d, --dry-run  Do nothing, except checking parameters
-  -M             Output GCC compatible dependency file
-  -MM            Like '-M', but don't include system headers
-  -MT target     Change the target of the rule emitted by dependency
-                 generation (default: base name of source, with object
-                 extension (.pc))
-  -MF file       When used with -M or -MM, specifies a file to write the
-                 dependencies to.
-  -MG            Assume missing header files are generated files and add them
-                 to the dependency list without raising an error
-  -MP            Add a phony target for each dependency to support renaming
-                 dependencies without having to update the Makefile to match
-  --ktrans PATH  Location of ktrans (by default ktransw assumes it's on the
-                 Windows PATH)
-  --gpp PATH     Location of gpp (by default ktransw assumes it's on the
-                 Windows PATH)
-  -I PATH        Include paths (multiple allowed)
+  -h, --help            show this help message and exit
+  -v, --verbose         Print (lots of) debug information
+  -q, --quiet           Print nothing, except when ktrans encounters an error
+  -d, --dry-run         Do nothing, except checking parameters
+  -E                    Preprocess only; do not translate
+  -M                    Output GCC compatible dependency file
+  -MM                   Like '-M', but don't include system headers
+  -MT target            Change the target of the rule emitted by dependency
+                        generation (default: base name of source, with object
+                        extension (.pc))
+  -MF file              When used with -M or -MM, specifies a file to write the
+                        dependencies to.
+  -MG                   Assume missing header files are generated files and add them
+                        to the dependency list without raising an error
+  -MP                   Add a phony target for each dependency to support renaming
+                        dependencies without having to update the Makefile to match
+  -k, --keep-build-dir  Don't delete the temporary build directory on exit
+  --ktrans PATH         Location of ktrans (by default ktransw assumes it's on the
+                        Windows PATH)
+  --gpp PATH            Location of gpp (by default ktransw assumes it's on the
+                        Windows PATH)
+  -I PATH               Include paths (multiple allowed)
 
 Example invocation:
 

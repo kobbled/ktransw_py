@@ -35,7 +35,7 @@ def main():
     description=("Version {0}\n\n"
         "A wrapper around Fanuc Robotics' command-line Karel translator ({1})\n"
         "that adds a C-like preprocessor, support for multiple include directories,\n"
-        "conditional compilation, include guards and macros."
+        "conditional compilation, include guards, macros and more."
             .format(KTRANSW_VERSION, KTRANS_BIN_NAME))
 
     epilog=("Example invocation:\n\n  ktransw /IC:\\foo\\bar\\include "
