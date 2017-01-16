@@ -409,16 +409,16 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs):
     ]
 
     # append include dirs we got from caller
-    gpp_cmdline.extend(['-I' + d for d in include_dirs])
+    gpp_cmdline.extend(['-I"{0}"'.format(d) for d in include_dirs])
 
     # make gpp output to temporary file immediately, so we can have
     # ktrans open that, instead of having to write to the intermediary file
     # ourselves
-    gpp_cmdline.extend(['-o', dest_file])
+    gpp_cmdline.extend(['-o "{0}"'.format(dest_file)])
 
     # finally: the input to gpp is the KAREL file that we are supposed
     # to be compiling
-    gpp_cmdline.extend([src_file])
+    gpp_cmdline.extend(['"{0}"'.format(src_file)])
 
     return gpp_cmdline
 
