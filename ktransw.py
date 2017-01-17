@@ -252,10 +252,17 @@ def main():
                 logger.debug("Adding {0} to dependencies".format(hdr_path))
                 deps.append(hdr_path)
 
-            dep_lines = "{0} : {1}\n".format(target, ' \\\n\t'.join([dep for dep in deps]))
+            # escape spaces as ninja does not like those
+            for i in range(0, len(deps)):
+                deps[i] = deps[i].replace(' ', '\\ ')
+            target = target.replace(' ', '\\ ')
 
+            # write out dependency rules
+            dep_lines = '{0}: {1}\n'.format(target, ' '.join(['{}'.format(dep) for dep in deps]))
+
+            # and some phony targets if user requested that
             if args.add_phony_tgt_for_deps:
-                dep_lines += '\n'.join(['{0}:'.format(dep) for dep in deps]) + '\n'
+                dep_lines += '\n'.join([dep + ':' for dep in deps]) + '\n'
 
             # write out dependency file
             if args.dep_fname:
