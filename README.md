@@ -1,5 +1,5 @@
 # ktransw
-v0.2.0
+v0.2.2
 
 A wrapper around Fanuc Robotics' command-line Karel translator (`ktrans.exe`)
 that makes it work a little more like a modern compiler by adding some missing
@@ -45,7 +45,7 @@ usage: ktransw [-h] [-v] [-q] [-d] [-E] [-M] [-MM] [-MT target] [-MF file]
                [-MG] [-MP] [--ktrans PATH] [--gpp PATH] [-I PATH]
                [ARG [ARG ...]]
 
-Version 0.2.0
+Version 0.2.2
 
 A wrapper around Fanuc Robotics' command-line Karel translator (ktrans.exe)
 that adds a C-like preprocessor, support for multiple include directories,
