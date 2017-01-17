@@ -278,8 +278,14 @@ def main():
             if (args.ktrans_args[i] == kl_file):
                 args.ktrans_args[i] = fname
 
+        # quote all paths as they may potentially contain spaces and ktrans
+        # (or the shell really) can't handle that
+        for i in range(0, len(args.ktrans_args)):
+            if (args.ktrans_args[i][0] != '/') and (args.ktrans_args[i][0] != 'V') and (args.ktrans_args[i][0] != 'v'):
+                args.ktrans_args[i] = '"{0}"'.format(args.ktrans_args[i])
+
         # setup ktrans command line args
-        ktrans_cmdline = [ktrans_path]
+        ktrans_cmdline = ['"{0}"'.format(ktrans_path)]
         ktrans_cmdline.extend(args.ktrans_args)
         ktrans_cmdline = ' '.join(ktrans_cmdline)
 
