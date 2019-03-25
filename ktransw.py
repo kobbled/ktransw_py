@@ -243,7 +243,7 @@ def main():
                         hdr_path = os.path.join(hdr_dir, hdr_path)
                         logger.debug("Found {0} in '{1}'".format(hdr, hdr_dir))
 
-                    except ValueError, e:
+                    except ValueError as e:
                         if not args.ignore_missing_hdrs:
                             # we were not asked to ignore this, so exit with an error
                             sys.stderr.write("ktransw: fatal error: {0}: No such file or directory\n".format(hdr))
