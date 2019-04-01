@@ -126,7 +126,7 @@ def main():
             args.ktrans_args[i] = os.path.abspath(args.ktrans_args[i])
 
     logger.debug("Parsed args:")
-    for key, val in vars(args).iteritems():
+    for key, val in vars(args).items():
         if type(val) == list:
             logger.debug("  {0}:".format(key))
             for item in val:
@@ -243,7 +243,7 @@ def main():
                         hdr_path = os.path.join(hdr_dir, hdr_path)
                         logger.debug("Found {0} in '{1}'".format(hdr, hdr_dir))
 
-                    except ValueError as e:
+                    except (ValueError) as e:
                         if not args.ignore_missing_hdrs:
                             # we were not asked to ignore this, so exit with an error
                             sys.stderr.write("ktransw: fatal error: {0}: No such file or directory\n".format(hdr))
@@ -312,7 +312,9 @@ def main():
             # TODO: we loose stdout/stderr interleaving here
             # TODO: the error messages refer to lines in the temporary,
             # preprocessed KAREL source file, not the original one.
-            sys.stdout.write(pstdout.replace(dname, os.path.dirname(kl_file)) + '\n')
+            pstdout = pstdout.decode('utf-8')
+            ktrans_out = pstdout.replace(dname, os.path.dirname(kl_file)) + '\n'
+            sys.stdout.write(ktrans_out)
 
         sys.exit(ktrans_proc.returncode)
 
@@ -326,7 +328,7 @@ def get_includes_from_file(fname):
 GPP_OP_ENTER='1'
 GPP_OP_EXIT='2'
 def scan_for_inc_stmts(text):
-    matches = re.findall(r'^-- INCLUDE_MARKER (\d+):(\S+):(\d+|)', text, re.MULTILINE)
+    matches = re.findall(r'^-- INCLUDE_MARKER (\d+):(\S+):(\d+|)', text.decode('utf-8'), re.MULTILINE)
     incs = []
     for (line_nr, fpath, op) in matches:
         if (op == GPP_OP_ENTER) and (fpath not in incs):
