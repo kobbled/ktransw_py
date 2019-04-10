@@ -9,7 +9,7 @@ generation).
 
 ## Requirements
 
-`ktransw` is written in Python 3, so naturally it needs a Python 3 install.  'ktransw.cmd' calls python launcher "py -3", so make sure python launcher is installed with your python 3 distribution.
+`ktransw` is written in Python 3, so naturally it needs a Python 3 install.
 
 The script itself doesn't do any translation, so a copy of `ktrans.exe` (and
 related libraries) is also needed.
