@@ -207,6 +207,9 @@ def main():
             # positive, while ktrans' are negative ..)
             sys.exit(gpp_proc.returncode)
 
+        #remove blank lines
+        remove_blank_lines(fname)
+          
 
         # pre-processing done
 
@@ -321,6 +324,15 @@ def get_includes_from_file(fname):
     with open(fname, 'rb') as fd:
         source = fd.read()
         return scan_for_inc_stmts(source)
+
+def remove_blank_lines(fname):
+    with open(fname, 'r+') as inf:
+      lines = inf.readlines()
+      lines = [line for line in lines if line.strip() != ""]
+          
+      inf.seek(0)
+      inf.write(''.join(lines))
+      inf.truncate()
 
 
 GPP_OP_ENTER='1'
