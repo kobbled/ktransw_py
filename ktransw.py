@@ -23,14 +23,14 @@ import subprocess
 import logging
 import re
 
+KTRANSW_VERSION='0.2.3'
+KTRANS_BIN_NAME='ktrans.exe'
+GPP_BIN_NAME='gpp.exe'
+_OS_EX_DATAERR=65
+KL_SUFFIX = '.kl'
+PCODE_SUFFIX = '.pc'
 
 def main():
-    KTRANSW_VERSION='0.2.3'
-    KTRANS_BIN_NAME='ktrans.exe'
-    GPP_BIN_NAME='gpp.exe'
-    _OS_EX_DATAERR=65
-    KL_SUFFIX = '.kl'
-    PCODE_SUFFIX = '.pc'
 
     description=("Version {0}\n\n"
         "A wrapper around Fanuc Robotics' command-line Karel translator ({1})\n"
@@ -175,41 +175,58 @@ def main():
 
         # TODO: see if ktrans will read from a named pipe ('\\.\pipe\temp.kl')
 
+
+        #pre-process main file
+        #find and replace %class directives
+        classes_file = os.path.join(dname, 'obj-' + os.path.basename(kl_file))
+        #pre-process main file
+        pre_file = os.path.join(dname, 'pre-' + os.path.basename(kl_file))
+        #final pass through filename
         fname = os.path.join(dname, os.path.basename(kl_file))
-        logger.debug("Storing preprocessed KAREL source at: {}".format(fname))
 
+        #search for class instantiations
+        classes = search_for_classes(kl_file, classes_file)
+        if len(classes) > 0:
+          # do first pass before finding class instantiations
+          # then run through pre-processor again to execute any
+          # pre-processor directives from header files. 
 
-        # do actual pre-processing
-        logger.debug("Starting pre-processing of {}".format(kl_file))
+          logger.debug("Storing preprocessed KAREL source (1st pass) at: {}".format(pre_file))
 
-        # setup command line for gpp
-        gpp_cmdline = setup_gpp_cline(gpp_path, kl_file, fname, args.include_dirs)
-        # TODO: why do we need to do this ourselves? gpp doesn't run
-        #       correctly if we don't, but it shouldn't matter?
-        gpp_cmdline = ' '.join(gpp_cmdline)
+          run_gpp(classes_file, pre_file, args, logger)
+          #remove blank lines
+          remove_blank_lines(pre_file)
 
-        # invoke gpp and save output
-        logger.debug("Starting gpp as: '{0}'".format(gpp_cmdline))
-        gpp_proc = subprocess.Popen(gpp_cmdline, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
-        (pstdout, pstderr) = gpp_proc.communicate()
+          header_files = []
+          for obj in classes:
+            #make object file and preprocess
+            obj_file = os.path.join(dname, os.path.basename('pre-'+obj[1]+".kl"))
+            obj_processed = os.path.join(dname, os.path.basename(obj[1]+".kl"))
+            create_object(obj, obj_file)
+            run_gpp(obj_file, obj_processed, args, logger)
+            remove_blank_lines(obj_processed)
+            #append to ktrans list
+            kl_files.append(obj_processed)
+            #make header inclusion and preprocess
+            header_files.append(os.path.join(dname, os.path.basename('pre-'+obj[1]+".klh")))
+            create_object_hdr(obj, header_files[-1])
 
-        logger.debug("End of gpp, ret: {0}".format(gpp_proc.returncode))
+          #insert header inclusions back into original karel file
+          insert_headers(pre_file, header_files, classes)
 
-        # make sure to relay errors in case there are any, even if we're quiet
-        if (gpp_proc.returncode != 0):
-            sys.stderr.write(
-                "{}\n"
-                "Translation terminated\n".format(pstderr))
+          #pre-process main file 2nd pass through
+          logger.debug("Storing preprocessed KAREL source (2nd pass) at: {}".format(fname))
+          run_gpp(pre_file, fname, args, logger)
+          remove_blank_lines(fname)
+        else:
+          logger.debug("Storing preprocessed KAREL source at: {}".format(fname))
+          run_gpp(kl_file, fname, args, logger)
+          remove_blank_lines(fname)
 
-            # TODO: this is not very nice, as it essentially merges the set of
-            # possible exit codes of gpp with those of ktrans (and gpp's are
-            # positive, while ktrans' are negative ..)
-            sys.exit(gpp_proc.returncode)
-
-        #remove blank lines
-        remove_blank_lines(fname)
-          
+        # replace user specified source file with the preprocessed one
+        for i in range(0, len(kl_files)):
+            if (kl_files[i] == kl_file):
+                kl_files[i] = fname
 
         # pre-processing done
 
@@ -282,42 +299,10 @@ def main():
                 sys.stdout.write(inf.read())
             sys.exit(0)
 
-
-        # replace user specified source file with the preprocessed one
-        for i in range(0, len(args.ktrans_args)):
-            if (args.ktrans_args[i] == kl_file):
-                args.ktrans_args[i] = fname
-
-        # quote all paths as they may potentially contain spaces and ktrans
-        # (or the shell really) can't handle that
-        for i in range(0, len(args.ktrans_args)):
-            if (args.ktrans_args[i][0] != '/') and (args.ktrans_args[i][0] != 'V') and (args.ktrans_args[i][0] != 'v'):
-                args.ktrans_args[i] = '"{0}"'.format(args.ktrans_args[i])
-
-        # setup ktrans command line args
-        ktrans_cmdline = ['"{0}"'.format(ktrans_path)]
-        ktrans_cmdline.extend(args.ktrans_args)
-        ktrans_cmdline = ' '.join(ktrans_cmdline)
-
-        logger.debug("Starting ktrans as: '{}'".format(ktrans_cmdline))
-        # NOTE: we remap stderr to stdout as ktrans doesn't use those
-        # consistently (ie: uses stderr when it should use stdout and
-        # vice versa)
-        ktrans_proc = subprocess.Popen(ktrans_cmdline, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-        (pstdout, _) = ktrans_proc.communicate()
-
-        # let caller know how we did
-        logger.debug("End of ktrans, ret: {0}".format(ktrans_proc.returncode))
-
-        # print ktrans output only on error or if we're not quiet
-        if (ktrans_proc.returncode != 0) or (not args.quiet) or args.verbose:
-            # TODO: we loose stdout/stderr interleaving here
-            # TODO: the error messages refer to lines in the temporary,
-            # preprocessed KAREL source file, not the original one.
-            sys.stdout.write(pstdout.decode('utf-8').replace(dname, os.path.dirname(kl_file)) + '\n')
-
-        sys.exit(ktrans_proc.returncode)
+        for i in range(0, len(kl_files)):
+          ret_code = run_ktrans(kl_files[i], args, logger)
+        
+        sys.exit(ret_code)
 
 
 def get_includes_from_file(fname):
@@ -333,6 +318,148 @@ def remove_blank_lines(fname):
       inf.seek(0)
       inf.write(''.join(lines))
       inf.truncate()
+
+def run_gpp(inpt, outpt, args, logger):
+    gpp_path = os.path.abspath(args.gpp_path) if args.gpp_path else GPP_BIN_NAME
+    # do actual pre-processing
+    logger.debug("Starting pre-processing of {}".format(inpt))
+
+    # setup command line for gpp
+    gpp_cmdline = setup_gpp_cline(gpp_path, inpt, outpt, args.include_dirs)
+    # TODO: why do we need to do this ourselves? gpp doesn't run
+    #       correctly if we don't, but it shouldn't matter?
+    gpp_cmdline = ' '.join(gpp_cmdline)
+
+    # invoke gpp and save output
+    logger.debug("Starting gpp as: '{0}'".format(gpp_cmdline))
+    gpp_proc = subprocess.Popen(gpp_cmdline, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+    (pstdout, pstderr) = gpp_proc.communicate()
+
+    logger.debug("End of gpp, ret: {0}".format(gpp_proc.returncode))
+
+    # make sure to relay errors in case there are any, even if we're quiet
+    if (gpp_proc.returncode != 0):
+        sys.stderr.write(
+            "{}\n"
+            "Translation terminated\n".format(pstderr))
+
+        # TODO: this is not very nice, as it essentially merges the set of
+        # possible exit codes of gpp with those of ktrans (and gpp's are
+        # positive, while ktrans' are negative ..)
+        sys.exit(gpp_proc.returncode)
+
+def run_ktrans(inpt, args, logger):
+    ktrans_path = os.path.abspath(args.ktrans_path) if args.ktrans_path else KTRANS_BIN_NAME
+    kl_files = [arg for arg in args.ktrans_args if arg.endswith(KL_SUFFIX)]
+    # quote all paths as they may potentially contain spaces and ktrans
+    # (or the shell really) can't handle that
+    # ** hack arguments to insert the requested input file into the ktrans arguments
+    ktrans_args = []
+    for i in range(0, len(args.ktrans_args)):
+        if (args.ktrans_args[i] == kl_files[0]):
+            ktrans_args.append('"{0}"'.format(inpt))
+        elif (args.ktrans_args[i][0] != '/') and (args.ktrans_args[i][0] != 'V') and (args.ktrans_args[i][0] != 'v'):
+            ktrans_args.append('"{0}"'.format(args.ktrans_args[i]))
+        else:
+            ktrans_args.append('{0}'.format(args.ktrans_args[i]))
+
+    # setup ktrans command line args
+    ktrans_cmdline = ['"{0}"'.format(ktrans_path)]
+    ktrans_cmdline.extend(ktrans_args)
+    ktrans_cmdline = ' '.join(ktrans_cmdline)
+
+    logger.debug("Starting ktrans as: '{}'".format(ktrans_cmdline))
+    # NOTE: we remap stderr to stdout as ktrans doesn't use those
+    # consistently (ie: uses stderr when it should use stdout and
+    # vice versa)
+    ktrans_proc = subprocess.Popen(ktrans_cmdline, stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT)
+    (pstdout, _) = ktrans_proc.communicate()
+
+    # let caller know how we did
+    logger.debug("End of ktrans, ret: {0}".format(ktrans_proc.returncode))
+
+    # print ktrans output only on error or if we're not quiet
+    if (ktrans_proc.returncode != 0) or (not args.quiet) or args.verbose:
+        # TODO: we loose stdout/stderr interleaving here
+        # TODO: the error messages refer to lines in the temporary,
+        # preprocessed KAREL source file, not the original one.
+        sys.stdout.write(pstdout.decode('utf-8').replace(os.path.dirname(inpt), os.path.dirname(kl_files[0])) + '\n')
+
+    return ktrans_proc.returncode
+
+def search_for_classes(inpt, outpt):
+    # match %class name('class.klc','class.klh',<'class.klt'>)
+    pattern = r"(?:\%class\s*)(\w+)\s*\(\s*'(\w+.\w+)'(?:\s*,\s*'(\w+.\w+)')(?:\s*,\s*'(\w+.\w+)')*\s*\)"
+    objects =[]
+    with open(inpt, 'r+') as inf:
+      lines = inf.readlines()
+      k = 1
+      for i in range(len(lines)):
+        m = re.match(pattern, lines[i])
+        if m:
+          #make a list in the format (index, object_name, class_file, header_file, type_name, type_file)
+          obj = []
+          obj.append(k)
+          for j in range(1,m.lastindex+1):
+            obj.append(m.group(j))
+          objects.append(obj)
+          
+          #replace line with include marker for later insersion
+          lines[i] = "-- INCLUDE_MARKER {0}:{1}:1\n".format(k,m.group(1))
+          k += 1
+    
+    with open(outpt, 'w') as inf:
+        inf.write(''.join(lines))
+        inf.truncate()
+
+    return objects
+
+def create_object(obj, fname):
+    with open(fname,"w+") as f:
+      #define a class_name for the .klc file to evaluate
+      f.write(r"%defeval class_name {0}".format(obj[1]) + '\n')
+      #define a type_name for the .klc file to evaluate if it exists
+      if len(obj) > 4:
+        f.write(r"%include {0}".format(obj[4]) + '\n')
+      #call the class '.klc' file
+      f.write(r"%include {0}".format(obj[2]) + '\n')
+
+def create_object_hdr(obj, fname):
+    with open(fname,"w+") as f:
+      f.write(r"%defeval class_name {0}".format(obj[1]) + '\n')
+      if len(obj) > 4:
+        f.write(r"%include {0}".format(obj[4]) + '\n')
+      #process header file
+      f.write(r"%include {0}".format(obj[3]) + '\n')
+
+def insert_headers(fname, header_files, objects):
+    pattern = r"(?:--\s*INCLUDE_MARKER\s*(\d+)\:({0})+\:1)".format('|'.join([obj[1] for obj in objects]))
+
+    with open(fname,"r+") as f:
+      lines = f.readlines()
+      for i in range(len(lines)):
+        m = re.match(pattern, lines[i])
+        if m:
+          for obj in objects:
+            if str(obj[0]) == m.group(1) and obj[1] == m.group(2):
+              #find associating header file
+              fle = [hdr for hdr in header_files if (m.group(2) in os.path.basename(hdr))][0]
+              if not fle:
+                raise Exception('header file {0} was not created'.format(m.group(2)))
+              with open(fle,"r") as h:
+                inclusion = h.read()
+              #include header into main file
+              lines[i] = inclusion
+              break
+
+      #write back into file
+      f.seek(0)
+      f.write(''.join(lines))
+      f.truncate()
+
+
 
 
 GPP_OP_ENTER='1'
