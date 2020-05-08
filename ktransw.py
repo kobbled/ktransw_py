@@ -181,6 +181,8 @@ def main():
         classes_file = os.path.join(dname, 'obj-' + os.path.basename(kl_file))
         #pre-process main file
         pre_file = os.path.join(dname, 'pre-' + os.path.basename(kl_file))
+        #2nd pass main file
+        pass2_file = os.path.join(dname, 'pass2-' + os.path.basename(kl_file))
         #final pass through filename
         fname = os.path.join(dname, os.path.basename(kl_file))
 
@@ -194,16 +196,21 @@ def main():
           logger.debug("Storing preprocessed KAREL source (1st pass) at: {}".format(pre_file))
 
           run_gpp(classes_file, pre_file, args, logger)
-          #remove blank lines
           remove_blank_lines(pre_file)
 
           header_files = []
           for obj in classes:
             #make object file and preprocess
             obj_file = os.path.join(dname, os.path.basename('pre-'+obj[1]+".kl"))
+            obj_pass2 = os.path.join(dname, os.path.basename('pass2-'+obj[1]+".kl"))
+
             obj_processed = os.path.join(dname, os.path.basename(obj[1]+".kl"))
             create_object(obj, obj_file)
-            run_gpp(obj_file, obj_processed, args, logger)
+            #1st pass to pre-process
+            run_gpp(obj_file, obj_pass2, args, logger)
+            #2nd pass to remove ` char
+            remove_char(obj_pass2, "`")
+            run_gpp(obj_pass2, obj_processed, args, logger)
             remove_blank_lines(obj_processed)
             #append to ktrans list
             kl_files.append(obj_processed)
@@ -216,11 +223,23 @@ def main():
 
           #pre-process main file 2nd pass through
           logger.debug("Storing preprocessed KAREL source (2nd pass) at: {}".format(fname))
-          run_gpp(pre_file, fname, args, logger)
-          remove_blank_lines(fname)
+          run_gpp(pre_file, pass2_file, args, logger)
+
+          #remove leftover "`" characters from kransw_macros
+          # *** see docstring for details
+          remove_char(pass2_file, "`")
+          #do final gpp pass
+          run_gpp(pass2_file, fname, args, logger)
+          remove_blank_lines(pass2_file)
         else:
           logger.debug("Storing preprocessed KAREL source at: {}".format(fname))
-          run_gpp(kl_file, fname, args, logger)
+          # do first pass
+          run_gpp(kl_file, pre_file, args, logger)
+          #remove leftover "`" characters from kransw_macros
+          # *** see docstring for details
+          remove_char(pre_file, "`")
+          #do final gpp pass
+          run_gpp(pre_file, fname, args, logger)
           remove_blank_lines(fname)
 
         # replace user specified source file with the preprocessed one
@@ -457,6 +476,41 @@ def insert_headers(fname, header_files, objects):
       #write back into file
       f.seek(0)
       f.write(''.join(lines))
+      f.truncate()
+
+
+def remove_char(fname, char):
+    """ (HACK) this is for defining a user defined %define name at time of compilation
+      couldn't figure out how to process this in a single function: 
+      ```
+      %mode push
+      %mode quote "$"
+      %define alias foo
+      %define func bar
+      %defeval declare $%define alias func$
+      %mode pop
+      declare
+      ```
+      you cannot nest "%mode quote "$"" in "%mode string QQQ "`" "`" "\\""
+      making is seemingly impossible to do this in one line
+
+      current solution is to use %mode nostring "`" to evaluate the expression
+      ```
+        %defeval TEMP0 `%define alias func^`
+        TEMP0
+      ```
+      However this still leaves `` around the %define, hence removing the character
+      and incorperating another gpp pass. might have conflicts on choice of nostring
+      character. 
+    
+    """
+
+    with open(fname, 'r+') as f:
+      data = f.read()
+      data = data.replace(char, "")
+      #write back into file
+      f.seek(0)
+      f.write(data)
       f.truncate()
 
 
