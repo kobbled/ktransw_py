@@ -30,6 +30,13 @@ _OS_EX_DATAERR=65
 KL_SUFFIX = '.kl'
 PCODE_SUFFIX = '.pc'
 
+#store files to run through ktrans
+kl_files = []
+#list to hold class injection points
+class_injections = []
+#list to store header injections
+header_injections = []
+
 def main():
 
     description=("Version {0}\n\n"
@@ -138,11 +145,14 @@ def main():
     # extract args which refer to KAREL sources: we can just search for
     # arguments with '.kl' in it, as ktrans only considers files with that
     # extension.
-    kl_files = [arg for arg in args.ktrans_args if arg.endswith(KL_SUFFIX)]
+    pre_gpp_files = []
+    for arg in args.ktrans_args:
+      if arg.endswith(KL_SUFFIX):
+        pre_gpp_files.append(arg)
 
 
     # avoid running a build if we don't need it
-    needs_build = len(kl_files) > 0
+    needs_build = len(pre_gpp_files) > 0
     logger.debug("{0} a build".format("Needs" if needs_build else "Doesn't need"))
 
     if not needs_build:
@@ -157,7 +167,7 @@ def main():
         sys.exit(ktrans_ret)
 
     # assume there's only one input source file (or: we ignore all others)
-    kl_file = kl_files[0]
+    kl_file = pre_gpp_files[0]
 
     # checks done, can now proceed to actual pre-processing / translation ..
     # .. but only if not requested to do a dry-run
@@ -176,76 +186,11 @@ def main():
         # TODO: see if ktrans will read from a named pipe ('\\.\pipe\temp.kl')
 
 
-        #pre-process main file
-        #find and replace %class directives
-        classes_file = os.path.join(dname, 'obj-' + os.path.basename(kl_file))
-        #pre-process main file
-        pre_file = os.path.join(dname, 'pre-' + os.path.basename(kl_file))
-        #2nd pass main file
-        pass2_file = os.path.join(dname, 'pass2-' + os.path.basename(kl_file))
         #final pass through filename
         fname = os.path.join(dname, os.path.basename(kl_file))
 
-        #search for class instantiations
-        classes = search_for_classes(kl_file, classes_file)
-        if len(classes) > 0:
-          # do first pass before finding class instantiations
-          # then run through pre-processor again to execute any
-          # pre-processor directives from header files. 
-
-          logger.debug("Storing preprocessed KAREL source (1st pass) at: {}".format(pre_file))
-
-          run_gpp(classes_file, pre_file, args, logger)
-          remove_blank_lines(pre_file)
-
-          header_files = []
-          for obj in classes:
-            #make object file and preprocess
-            obj_file = os.path.join(dname, os.path.basename('pre-'+obj[1]+".kl"))
-            obj_pass2 = os.path.join(dname, os.path.basename('pass2-'+obj[1]+".kl"))
-
-            obj_processed = os.path.join(dname, os.path.basename(obj[1]+".kl"))
-            create_object(obj, obj_file)
-            #1st pass to pre-process
-            run_gpp(obj_file, obj_pass2, args, logger)
-            #2nd pass to remove ` char
-            remove_char(obj_pass2, "`")
-            run_gpp(obj_pass2, obj_processed, args, logger)
-            remove_blank_lines(obj_processed)
-            #append to ktrans list
-            kl_files.append(obj_processed)
-            #make header inclusion and preprocess
-            header_files.append(os.path.join(dname, os.path.basename('pre-'+obj[1]+".klh")))
-            create_object_hdr(obj, header_files[-1])
-
-          #insert header inclusions back into original karel file
-          insert_headers(pre_file, header_files, classes)
-
-          #pre-process main file 2nd pass through
-          logger.debug("Storing preprocessed KAREL source (2nd pass) at: {}".format(fname))
-          run_gpp(pre_file, pass2_file, args, logger)
-
-          #remove leftover "`" characters from kransw_macros
-          # *** see docstring for details
-          remove_char(pass2_file, "`")
-          #do final gpp pass
-          run_gpp(pass2_file, fname, args, logger)
-          remove_blank_lines(pass2_file)
-        else:
-          logger.debug("Storing preprocessed KAREL source at: {}".format(fname))
-          # do first pass
-          run_gpp(kl_file, pre_file, args, logger)
-          #remove leftover "`" characters from kransw_macros
-          # *** see docstring for details
-          remove_char(pre_file, "`")
-          #do final gpp pass
-          run_gpp(pre_file, fname, args, logger)
-          remove_blank_lines(fname)
-
-        # replace user specified source file with the preprocessed one
-        for i in range(0, len(kl_files)):
-            if (kl_files[i] == kl_file):
-                kl_files[i] = fname
+        #process files and class objects through recursive gpp process
+        make_classes(kl_file, fname, dname, args, logger)
 
         # pre-processing done
 
@@ -370,13 +315,13 @@ def run_gpp(inpt, outpt, args, logger):
 
 def run_ktrans(inpt, args, logger):
     ktrans_path = os.path.abspath(args.ktrans_path) if args.ktrans_path else KTRANS_BIN_NAME
-    kl_files = [arg for arg in args.ktrans_args if arg.endswith(KL_SUFFIX)]
+    run_files = [arg for arg in args.ktrans_args if arg.endswith(KL_SUFFIX)]
     # quote all paths as they may potentially contain spaces and ktrans
     # (or the shell really) can't handle that
     # ** hack arguments to insert the requested input file into the ktrans arguments
     ktrans_args = []
     for i in range(0, len(args.ktrans_args)):
-        if (args.ktrans_args[i] == kl_files[0]):
+        if (args.ktrans_args[i] == run_files[0]):
             ktrans_args.append('"{0}"'.format(inpt))
         elif (args.ktrans_args[i][0] != '/') and (args.ktrans_args[i][0] != 'V') and (args.ktrans_args[i][0] != 'v'):
             ktrans_args.append('"{0}"'.format(args.ktrans_args[i]))
@@ -404,9 +349,70 @@ def run_ktrans(inpt, args, logger):
         # TODO: we loose stdout/stderr interleaving here
         # TODO: the error messages refer to lines in the temporary,
         # preprocessed KAREL source file, not the original one.
-        sys.stdout.write(pstdout.decode('utf-8').replace(os.path.dirname(inpt), os.path.dirname(kl_files[0])) + '\n')
+        sys.stdout.write(pstdout.decode('utf-8').replace(os.path.dirname(inpt), os.path.dirname(run_files[0])) + '\n')
 
     return ktrans_proc.returncode
+
+
+def make_classes(fil, output_file, folder, args, logger):
+    #search for class instantiations
+
+    #classes_file = os.path.join(dname, 'obj-' + os.path.basename(kl_file))
+    #pre_file = os.path.join(dname, 'pre-' + os.path.basename(kl_file))
+    #pass2_file = os.path.join(dname, 'pass2-' + os.path.basename(kl_file))
+    #fname = os.path.join(dname, os.path.basename(kl_file))
+
+    #classes = search_for_classes(kl_file, classes_file)
+
+    #run through 1st pass to reveal any %class directives
+    pre_file = os.path.join(folder, 'pre-' + os.path.basename(fil))
+    run_gpp(fil, pre_file, args, logger)
+    remove_blank_lines(pre_file)
+
+    #add to list of class injections
+    classes = search_for_classes(pre_file, pre_file)
+    class_injections.extend(classes)
+
+    # do first pass
+    pass1_file = os.path.join(folder, 'pass1-' + os.path.basename(fil))
+    logger.debug("Storing preprocessed KAREL source at: {}".format(pass1_file))
+
+    run_gpp(pre_file, pass1_file, args, logger)
+    remove_blank_lines(pass1_file)
+
+    if len(classes) > 0:
+      #if classes is found create object files do 2nd pass
+      for obj in classes:
+        #make object file and preprocess
+        obj_file = os.path.join(folder, os.path.basename('obj-'+obj[1]+".kl"))
+        obj_processed = os.path.join(folder, os.path.basename(obj[1]+".kl"))
+        #make header inclusion and preprocess
+        header_injections.append(os.path.join(folder, os.path.basename('pre-'+obj[1]+".klh")))
+
+        #create object file
+        create_object(obj, obj_file)
+        #create header file for object
+        create_object_hdr(obj, header_injections[-1])
+
+        # recursively loop through object files
+        make_classes(obj_file, obj_processed, folder, args, logger)
+
+    #insert header inclusions back into original karel file
+    insert_headers(pass1_file, header_injections, class_injections)
+    #evaluate injections
+    pass2_file = os.path.join(folder, 'pass2-' + os.path.basename(fil))
+    run_gpp(pass1_file, pass2_file, args, logger)
+    #remove leftover "`" characters from kransw_macros
+    # *** see docstring for details
+    remove_char(pass2_file, "`")
+    #do final gpp pass
+    run_gpp(pass2_file, output_file, args, logger)
+    remove_blank_lines(output_file)
+
+    #append processed file to ktrans list
+    kl_files.append(output_file)
+
+
 
 def search_for_classes(inpt, outpt):
     # match %class name('class.klc','class.klh',<'class.klt'>)
@@ -430,6 +436,7 @@ def search_for_classes(inpt, outpt):
           k += 1
     
     with open(outpt, 'w') as inf:
+        inf.seek(0)
         inf.write(''.join(lines))
         inf.truncate()
 
@@ -453,7 +460,7 @@ def create_object_hdr(obj, fname):
       #process header file
       f.write(r"%include {0}".format(obj[3]) + '\n')
 
-def insert_headers(fname, header_files, objects):
+def insert_headers(fname, header_injections, objects):
     pattern = r"(?:--\s*INCLUDE_MARKER\s*(\d+)\:({0})+\:1)".format('|'.join([obj[1] for obj in objects]))
 
     with open(fname,"r+") as f:
@@ -464,7 +471,7 @@ def insert_headers(fname, header_files, objects):
           for obj in objects:
             if str(obj[0]) == m.group(1) and obj[1] == m.group(2):
               #find associating header file
-              fle = [hdr for hdr in header_files if (m.group(2) in os.path.basename(hdr))][0]
+              fle = [hdr for hdr in header_injections if (m.group(2) in os.path.basename(hdr))][0]
               if not fle:
                 raise Exception('header file {0} was not created'.format(m.group(2)))
               with open(fle,"r") as h:
