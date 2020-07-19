@@ -102,6 +102,86 @@ See also [rossum][].
 
 See the [gpp documentation][] for more information.
 
+## \%class pre-processor directive
+
+Object construction or generic templating can be achieved with the \%class
+directive, and proper formatting:
+
+```
+%class <class-name>('<class-file>.klc','<class-header>.klh','<template-file>.klt')
+```
+
+**Note** : the *.klt* file is optional, used for creating generic templates but is 
+not needed for creating a class.
+
+See [bank_class] test in [rossum_example_ws](https://github.com/kobbled/rossum_example_ws) 
+to see how to format classes.
+
+**Note** : Take note of the usage of instances of `class_name`. This is a pre-processor
+macro that will be replaced with the class name defined in %class for each object.
+
+In *ktransw* objects are first created with pure gpp:
+
+```
+%defeval class_name <class-name>
+%include <template-file>.klt
+%include <class-file>.klc
+```
+
+Running these files through a few cycles of GPP will flatten and replace preprocessor
+directives with their defined karel code. The user is responsible for managing the 
+namespacing and scoping of members/attributes. The user can do this as they wish by defining 
+multiple header files, one for usage only in **\%class**, and another for outside of the 
+object instantantiation to give member visibility to the main program. The user can also 
+choose to follow the method in [bank_class] which leverages a third party package [ktransw-macros]. 
+The only thing that is required is that `class_name` is included in the *.klc*, and *.klh* 
+file for each routine, and program definition so that they resolve to the same definition as 
+outside of the class scope.
+
+**Note** : If you are building to roboguide < v9.10, you might have a 12 character limit for
+definitions. In this case it is advisable to use [ktransw-macros], and the \<class_name\>\_\_\<function\>
+namespacing technique, giving short alias names to each function.
+
+**Note** : Processing of **\%class** directives assumes extensive use of GPP mode:
+
+```
+%mode string QQQ "`" "`" "\\"
+```
+
+Using specifically the **\`** char for defining multi-line GPP functions to comply with the
+current GPP syntax definition:
+
+```python
+'+z',       # Set text mode to Unix mode (LF terminator)
+
+'--includemarker "-- INCLUDE_MARKER %:%:%"',
+          # line:file:op
+
+'-U',       # User-defined mode
+'""',       # the macro start sequence
+'""',       # the macro end sequence for a call without arguments
+'"("',      # the argument start sequence
+'","',      # the argument separator
+'")"',      # the argument end sequence
+'"("',      # the list of characters to stack for argument balancing
+'")"',      # the list of characters to unstack
+'"#"',      # the string to be used for referring to an argument by number
+'""',       # and finally the quote character (escapes embedded string chars)
+
+'-M',       # User-defined mode specifications for meta-macros
+'"\\n%\w"', # the macro start sequence
+'"\\n"',    # the macro end sequence for a call without arguments
+'" "',      # the argument start sequence
+'" "',      # the argument separator
+'"\\n"',    # the argument end sequence
+'""',       # the list of characters to stack for argument balancing
+'""',       # and the list of characters to unstack
+```
+
+This is done as a return character cannot be used to seperate a pre-processor function
+without conflicting with karel. The **\`** string mode is incorperated into *ktransw* 
+in order to dispose of the leftover **\`** chars to resolve nested macros.
+
 
 ## FAQ
 
@@ -166,3 +246,5 @@ author of `ktransw` is not affiliated with Fanuc in any way.
 [rossum]: https://github.com/gavanderhoorn/rossum
 [gpp documentation]: https://logological.org/gpp
 [fr_hdrs]: https://github.com/gavanderhoorn/fr_hdrs
+[bank_class]: https://github.com/kobbled/rossum_example_ws/tree/master/src/bank_class
+[ktransw-macros]: https://github.com/kobbled/ktransw-macros
