@@ -373,6 +373,10 @@ def make_classes(fil, output_file, folder, args, logger):
     classes = search_for_classes(pre_file, pre_file)
     class_injections.extend(classes)
 
+    #find any selective include declarations and replace them
+    #with function declarations
+    search_for_selective_include(pre_file, args.include_dirs)
+
     # do first pass
     pass1_file = os.path.join(folder, 'pass1-' + os.path.basename(fil))
     logger.debug("Storing preprocessed KAREL source at: {}".format(pass1_file))
@@ -520,7 +524,79 @@ def remove_char(fname, char):
       f.write(data)
       f.truncate()
 
+def findWholeWord(w):
+    """return if only full words are found, or a word with a preceeding '_'
+    """
+    return re.compile(r'(?:\b|_)({0})(?:\b)'.format(w), flags=re.IGNORECASE).search
 
+def isLineCont(prog, idx, out_string):
+    """function makes sure to absorb line continutations for parsing
+       out routine defintions in header files (i.e. look at def search_for_selective_include)
+    """
+    line = prog[idx].rstrip()
+    if line[-1] == '&':
+      out_string += prog[idx+1]
+      if idx+1 <= len(prog):
+        isLineCont(prog, idx+1, out_string)
+    
+    return out_string
+    
+
+
+def search_for_selective_include(inpt, include_dirs):
+    """search for selective includes '%from header.klh %import func1, func2'
+       Then find an look through header file for selective header declartions
+    """
+    # match %from header.klh %import func1, func2
+    pattern = r"(?:\%from\s*)([a-zA-Z_.0-9]*)(?:\s*\%import\s*)(\w+,?(\s*\w+,?)*)"
+    #selective include dictionary
+    sinc_dictionary = {}
+
+    with open(inpt,"r+") as f:
+      lines = f.readlines()
+      for i in range(len(lines)):
+        m = re.match(pattern, lines[i])
+        if m:
+          #find file in include directories
+          head_file = ''
+          for head_dir in include_dirs:
+            if os.path.exists(head_dir + '\\' + m.group(1)):
+              head_file = head_dir + '\\' + m.group(1)
+              break
+          
+          if head_file:
+            #start insersion string
+            insert_string = '%include namespace.m' + '\n'
+
+            #split specified functions into list
+            fs = m.group(2).replace(" ", "")
+            funcs = fs.split(',')
+
+            #go through header file and pick out sepecified
+            #function declarations
+            with open(head_file,'r') as f_head:
+              h_line = f_head.readlines()
+              for j in range(len(h_line)):
+                #look for namespace delarations
+                if any(nspace in h_line[j] for nspace in ['%define prog_name', '%define prog_name_alias']):
+                  insert_string += h_line[j]
+                #look for function declarations
+                #make sure only full words match
+                if any(findWholeWord(func)(h_line[j]) for func in funcs):
+                  insert_string += h_line[j]
+                  insert_string = isLineCont(h_line, j, insert_string)
+
+            
+            #replace line in input file with the insert_string
+            #holding the function declarations
+            lines[i] = insert_string
+          else:
+            raise Exception('{0} was not found in any include directory.'.format(m.group(1)))
+      
+      #write back into file
+      f.seek(0)
+      f.write(''.join(lines))
+      f.truncate()
 
 
 GPP_OP_ENTER='1'

@@ -182,6 +182,12 @@ This is done as a return character cannot be used to seperate a pre-processor fu
 without conflicting with karel. The **\`** string mode is incorperated into *ktransw* 
 in order to dispose of the leftover **\`** chars to resolve nested macros.
 
+## \%from \<file-name\> \%import <function>, <function>, etc...
+
+A "from/import" custom directive similar to that in python is included with ktransw. This
+is done to decrease the size of compiled .pc files, as the ktrans compiler does not exclude
+routines from an \%include file that do not link to any routine calls in the program being
+compiled.
 
 ## FAQ
 
