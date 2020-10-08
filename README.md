@@ -1,10 +1,12 @@
 # ktransw
-v0.2.3
+v0.2.4
 
 A wrapper around Fanuc Robotics' command-line Karel translator (`ktrans.exe`)
 that makes it work a little more like a modern compiler by adding some missing
 functionality (like support for multiple include paths and dependency file
 generation).
+
+As of v0.2.4 support for FANUC dictionaries and forms has been added to support preprocessor directives, multiple include paths, and functionality to build using [rossum][].
 
 
 ## Requirements
@@ -21,7 +23,7 @@ GPP (the "Generic PreProcessor").
 ## Installation
 
 Clone this repository to your machine (or download any of the [releases][])
-and add the directory containing `ktransw.py` and `ktransw.cmd` to your `PATH`.
+and add the directory containing `ktransw.py`/`ktransw.cmd` and `kcdictw.py`/`kcdictw.cmd` to your `PATH`.
 Command sessions opened after setting up the `PATH` should be able to
 successfully run `ktransw` from anywhere.
 
@@ -188,6 +190,11 @@ A "from/import" custom directive similar to that in python is included with ktra
 is done to decrease the size of compiled .pc files, as the ktrans compiler does not exclude
 routines from an \%include file that do not link to any routine calls in the program being
 compiled.
+
+## kcdictw
+
+A wrapper tool for kcdict is also included in this package called `kcdictw`. This tool will compress the **.ftx**, or **.utx** dictionary
+file into the temp directory, %TEMP%, and copy over the output **.tx**, **.vr** into the working directory, and the **.kl** karel include file into the root directory of the **.ftx** or **.utx** file. If you would like to keep the other **.ftx** files created by kcdict, use the **--keep-build-dir** option as to not delete the temp folder, where yo u can manually copy over the files after.
 
 ## FAQ
 
