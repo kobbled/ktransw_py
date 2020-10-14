@@ -22,6 +22,7 @@ import argparse
 import subprocess
 import logging
 import re
+import yaml
 
 KTRANSW_VERSION='0.2.3'
 KTRANS_BIN_NAME='ktrans.exe'
@@ -29,6 +30,15 @@ GPP_BIN_NAME='gpp.exe'
 _OS_EX_DATAERR=65
 KL_SUFFIX = '.kl'
 PCODE_SUFFIX = '.pc'
+
+FILE_MANIFEST = '.man_log'
+
+EXT_MAP = {
+      '.kl' : {'conversion' : '.pc'},
+      '.vr' : {'conversion' : '.vr'},
+      '.ftx' : {'conversion' : '.tx'},
+      '.utx' : {'conversion' : '.tx'}
+    }
 
 #store files to run through ktrans
 kl_files = []
@@ -256,6 +266,8 @@ def main():
             else:
                 sys.stdout.write(dep_lines)
 
+        #store files and classes in manifest
+        write_manifest(FILE_MANIFEST, [os.path.split(f)[-1] for f in kl_files], os.path.split(kl_file)[-1])
 
         # output only pre-processed source if user asked for that
         if args.output_ppd_source:
@@ -597,6 +609,41 @@ def search_for_selective_include(inpt, include_dirs):
       f.seek(0)
       f.write(''.join(lines))
       f.truncate()
+
+def write_manifest(manifest, files, parent):
+    file_list = dict()
+
+    #remove parent from files
+    children = [f for f in files if f not in parent]
+
+    #replace extensions with their conversions
+    for i in range(len(children)):
+      ext = os.path.splitext(children[i])[-1]
+      if ext in EXT_MAP.keys():
+        children[i] = os.path.splitext(children[i])[0] + EXT_MAP[ext]['conversion']
+
+    #replace parent extension with conversion
+    if os.path.splitext(parent)[-1] in EXT_MAP.keys():
+      parent = os.path.splitext(parent)[0] + EXT_MAP[os.path.splitext(parent)[-1]]['conversion']
+    
+    if os.path.exists(manifest):
+      with open(manifest) as man:
+        file_list = yaml.load(man, Loader=yaml.FullLoader)
+    
+    vals = {}
+    if parent in file_list.keys():
+      #retrieve list
+      vals = set(file_list[parent])
+    #add other files
+    if len(vals) > 0:
+      vals.update(set(children))
+    else:
+      vals = set(children)
+    file_list[parent] = list(vals)
+
+    #save back to yaml file
+    with open(manifest, 'w') as man:
+      yaml.dump(file_list, man)
 
 
 GPP_OP_ENTER='1'

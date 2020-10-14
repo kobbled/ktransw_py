@@ -21,6 +21,7 @@ import subprocess
 import shutil
 import logging
 import re
+import yaml
 
 KCDICTW_VERSION='0.0.1'
 KCDICT_BIN_NAME='kcdict.exe'
@@ -29,6 +30,15 @@ _OS_EX_DATAERR=65
 FORM_SUFFIX = '.ftx'
 DICT_SUFFIX = '.utx'
 COMPRESSED_SUFFIX = '.tx'
+
+FILE_MANIFEST = '.man_log'
+
+EXT_MAP = {
+      '.kl' : {'conversion' : '.pc'},
+      '.vr' : {'conversion' : '.vr'},
+      '.ftx' : {'conversion' : '.tx'},
+      '.utx' : {'conversion' : '.tx'}
+    }
 
 #store files to run through kcdict
 dict_files = []
@@ -133,16 +143,22 @@ def main():
     for i in range(0, len(dict_files)):
       ret_code = run_kcdict(dict_files[i], args, dname)
 
+    file_list = [os.path.split(f)[-1] for f in dict_files]
     # copy .tx file, .vr file to cwd
     shutil.copy(target, os.getcwd())
     for file in os.listdir(dname):
       if file.endswith(".vr"):
         shutil.copy(dname + '\\' + file, os.getcwd())
+        # add to file manifest
+        file_list.append(file)
     
     #copy all kl files to first include folder
     for file in os.listdir(dname):
       if file.lower().endswith(".kl"):
         shutil.copy(dname + '\\' + file, kl_dir)
+    
+    #store dict files and vr definitions in manifest
+    write_manifest(FILE_MANIFEST, file_list, os.path.split(kl_file)[-1])
     
     sys.exit(ret_code)
 
@@ -236,6 +252,41 @@ def run_kcdict(inpt, args, temp_dir):
         sys.stdout.write(pstdout.decode('utf-8').replace(os.path.dirname(inpt), os.path.dirname(run_files[0])) + '\n')
 
     return ktrans_proc.returncode
+
+def write_manifest(manifest, files, parent):
+
+    file_list = dict()
+
+    #remove parent from files
+    children = [f for f in files if f not in parent]
+    #replace extensions with their conversions
+    for i in range(len(children)):
+      ext = os.path.splitext(children[i])[-1]
+      if ext in EXT_MAP.keys():
+        children[i] = os.path.splitext(children[i])[0] + EXT_MAP[ext]['conversion']
+    
+    #replace parent extension with conversion
+    if os.path.splitext(parent)[-1] in EXT_MAP.keys():
+      parent = os.path.splitext(parent)[0] + EXT_MAP[os.path.splitext(parent)[-1]]['conversion']
+    
+    if os.path.exists(manifest):
+      with open(manifest) as man:
+        file_list = yaml.load(man, Loader=yaml.FullLoader)
+    
+    vals = {}
+    if parent in file_list.keys():
+      #retrieve list
+      vals = set(file_list[parent])
+    #add other files
+    if len(vals) > 0:
+      vals.update(set(children))
+    else:
+      vals = set(children)
+    file_list[parent] = list(vals)
+
+    #save back to yaml file
+    with open(manifest, 'w') as man:
+      yaml.dump(file_list, man)
 
 
 def find_hdr_in_incdirs(header, include_dirs):
