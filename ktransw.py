@@ -99,6 +99,8 @@ def main():
             "Windows PATH)")
     parser.add_argument('-I', action='append', type=str, dest='include_dirs',
         metavar='PATH', default=[], help='Include paths (multiple allowed)')
+    parser.add_argument('-D', action='append', type=str, dest='user_macros',
+        metavar='PATH', default=[], help='Define user macros from cmd')
     parser.add_argument('ktrans_args', type=str, nargs='*', metavar='ARG',
         help="Arguments to pass on to ktrans. Use normal (forward-slash) "
         "notation here")
@@ -107,6 +109,8 @@ def main():
     for i in range(1, len(sys.argv)):
         if sys.argv[i].startswith('/I'):
             sys.argv[i] = sys.argv[i].replace('/I', '-I', 1)
+        if sys.argv[i].startswith('/D'):
+            sys.argv[i] = sys.argv[i].replace('/D', '-D', 1)
     args = parser.parse_args()
 
     # configure the logger
@@ -301,7 +305,7 @@ def run_gpp(inpt, outpt, args, logger):
     logger.debug("Starting pre-processing of {}".format(inpt))
 
     # setup command line for gpp
-    gpp_cmdline = setup_gpp_cline(gpp_path, inpt, outpt, args.include_dirs)
+    gpp_cmdline = setup_gpp_cline(gpp_path, inpt, outpt, args.include_dirs, args.user_macros)
     # TODO: why do we need to do this ourselves? gpp doesn't run
     #       correctly if we don't, but it shouldn't matter?
     gpp_cmdline = ' '.join(gpp_cmdline)
@@ -692,7 +696,7 @@ def find_hdr_in_incdirs(header, include_dirs):
     raise ValueError()
 
 
-def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs):
+def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs, macro_strs):
     # setup gpp command line (based on 'C++ compatibility mode', but with some
     # changes to better integrate -- style-wise -- with Karel sources)
 
@@ -744,6 +748,10 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs):
         #'""'        # string-quote character (escapes embedded string chars)
     ]
 
+    # add user defined macros if defined from cmd line
+    if macro_strs:
+      gpp_cmdline.extend(['-D{0}'.format(d) for d in macro_strs])
+    
     # append include dirs we got from caller
     gpp_cmdline.extend(['-I"{0}"'.format(d) for d in include_dirs])
 

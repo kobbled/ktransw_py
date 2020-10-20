@@ -80,6 +80,7 @@ optional arguments:
   --gpp PATH            Location of gpp (by default ktransw assumes it's on the
                         Windows PATH)
   -I PATH               Include paths (multiple allowed)
+  -D  /D                Define user macros from command line
 
 Example invocation:
 
@@ -190,6 +191,10 @@ A "from/import" custom directive similar to that in python is included with ktra
 is done to decrease the size of compiled .pc files, as the ktrans compiler does not exclude
 routines from an \%include file that do not link to any routine calls in the program being
 compiled.
+
+## user macros
+
+Pre-processor macros can be defined from the command line invoking **-D***name=val*, or **/D***name=val*. See [GPP documentation][GPP].
 
 ## kcdictw
 
