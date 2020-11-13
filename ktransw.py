@@ -33,6 +33,7 @@ PCODE_SUFFIX = '.pc'
 
 FILE_MANIFEST = '.man_log'
 
+DATA_TYPES = ('karel', 'src', 'test')
 EXT_MAP = {
       '.kl' : {'conversion' : '.pc'},
       '.vr' : {'conversion' : '.vr'},
@@ -635,15 +636,22 @@ def write_manifest(manifest, files, parent):
         file_list = yaml.load(man, Loader=yaml.FullLoader)
     
     vals = {}
-    if parent in file_list.keys():
-      #retrieve list
-      vals = set(file_list[parent])
-    #add other files
-    if len(vals) > 0:
-      vals.update(set(children))
-    else:
+    found = False
+    for key in file_list.keys():
+      if (key in DATA_TYPES) and isinstance(file_list[key], dict):
+        sub_dict = file_list[key]
+        if parent in sub_dict.keys():
+          #retrieve list
+          vals = set(sub_dict[parent])
+          vals.update(set(children))
+          file_list[key][parent] = list(vals)
+          found = True
+
+    #insert into dictionary if parent not in manifest
+    if found == False:
+      file_list['karel'] = {}
       vals = set(children)
-    file_list[parent] = list(vals)
+      file_list['karel'][parent] = list(vals)
 
     #save back to yaml file
     with open(manifest, 'w') as man:
