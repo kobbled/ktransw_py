@@ -23,6 +23,7 @@ import subprocess
 import logging
 import re
 import yaml
+from shutil import copyfile
 
 KTRANSW_VERSION='0.2.3'
 KTRANS_BIN_NAME='ktrans.exe'
@@ -209,7 +210,8 @@ def main():
 
         # pre-processing done
 
-
+        base_source_name = ''
+        target = ''
         # see if we need to output dependency info
         if (args.dep_output or args.ignore_syshdrs):
             # use original filename for logging
@@ -276,8 +278,8 @@ def main():
 
         # output only pre-processed source if user asked for that
         if args.output_ppd_source:
-            with open(fname, 'r') as inf:
-                sys.stdout.write(inf.read())
+            for i in range(0, len(kl_files)):
+                copyfile(dname + '\\' + os.path.basename(kl_files[i]), os.path.basename(kl_files[i]))
             sys.exit(0)
 
         for i in range(0, len(kl_files)):
@@ -638,7 +640,7 @@ def write_manifest(manifest, files, parent):
     vals = {}
     found = False
     for key in file_list.keys():
-      if (key in DATA_TYPES) and isinstance(file_list[key], dict):
+      if isinstance(file_list[key], dict) and (key in DATA_TYPES):
         sub_dict = file_list[key]
         if parent in sub_dict.keys():
           #retrieve list
