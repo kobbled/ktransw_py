@@ -39,6 +39,17 @@ Download the latest binary release from [gpp releases][], and place it on
 the `PATH`. If `gpp.exe` cannot be placed on the path, the `--gpp` command
 line option may be used to tell `ktransw` where it is.
 
+| :warning: WARNING          |
+|:---------------------------|
+
+On windows machines the `python` alias can be overwritten by the py launcher where python is started in the terminal with `py -3`. The batch files are written with the `python` key. To create the alias type this into powershell:
+
+```powershell
+Set-Alias -Name python -Value "path\to\Python\Python39\python.exe"
+```
+
+replacing the value with the full path to the python executable in your PATH environment variables.
+
 
 ## Usage
 
