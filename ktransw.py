@@ -18,6 +18,7 @@ from __future__ import print_function
 
 import os
 import sys
+import time
 import argparse
 import subprocess
 import logging
@@ -634,30 +635,38 @@ def write_manifest(manifest, files, parent):
       parent = os.path.splitext(parent)[0] + EXT_MAP[os.path.splitext(parent)[-1]]['conversion']
     
     if os.path.exists(manifest):
-      with open(manifest) as man:
-        file_list = yaml.load(man, Loader=yaml.FullLoader)
+      file_list = None
+      with open(manifest, 'r') as man:
+        # ..todo:: issue with opening .man_log file concurrently numerous times through
+        #          ninja throwing "AttributeError: 'NoneType' object has no attribute 'keys'"
+        #          something is blocking while trying to open .man_log. The looping solution
+        #          below is an intermediary patch.
+        while file_list is None:
+          file_list = yaml.safe_load(man)
+          time.sleep(0.1)
     
-    vals = {}
-    found = False
-    for key in file_list.keys():
-      if isinstance(file_list[key], dict) and (key in DATA_TYPES):
-        sub_dict = file_list[key]
-        if parent in sub_dict.keys():
-          #retrieve list
-          vals = set(sub_dict[parent])
-          vals.update(set(children))
-          file_list[key][parent] = list(vals)
-          found = True
+        vals = {}
+        found = False
+        for key in file_list.keys():
+          if isinstance(file_list[key], dict) and (key in DATA_TYPES):
+            sub_dict = file_list[key]
+            if parent in sub_dict.keys():
+              #retrieve list
+              vals = set(sub_dict[parent])
+              vals.update(set(children))
+              file_list[key][parent] = list(vals)
+              found = True
 
-    #insert into dictionary if parent not in manifest
-    if found == False:
-      file_list['karel'] = {}
-      vals = set(children)
-      file_list['karel'][parent] = list(vals)
+        #insert into dictionary if parent not in manifest
+        if found == False:
+          file_list['karel'] = {}
+          vals = set(children)
+          file_list['karel'][parent] = list(vals)
 
-    #save back to yaml file
-    with open(manifest, 'w') as man:
-      yaml.dump(file_list, man)
+      #save back to yaml file
+      with open(manifest, 'w') as man:
+        yaml.dump(file_list, man)
+        man.close()
 
 
 GPP_OP_ENTER='1'
