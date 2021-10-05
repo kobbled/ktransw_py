@@ -35,7 +35,7 @@ PCODE_SUFFIX = '.pc'
 
 FILE_MANIFEST = '.man_log'
 
-DATA_TYPES = ('karel', 'src', 'test')
+DATA_TYPES = ('karel', 'src', 'test', 'interface')
 EXT_MAP = {
       '.kl' : {'conversion' : '.pc'},
       '.vr' : {'conversion' : '.vr'},
@@ -809,7 +809,7 @@ class TemporaryDirectory(object):
                 if "None" not in str(ex):
                     raise
                 print("ERROR: {!r} while cleaning up {!r}".format(ex, self,),
-                      file=_sys.stderr)
+                      file=sys.stderr)
                 return
             self._closed = True
             if _warn:
