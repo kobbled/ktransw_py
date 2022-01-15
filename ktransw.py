@@ -389,6 +389,10 @@ def make_classes(fil, output_file, folder, args, logger):
     run_gpp(fil, pre_file, args, logger)
     remove_blank_lines(pre_file)
 
+    #remove leftover "`" characters from kransw_macros
+    # *** see docstring for details
+    remove_char(pre_file, "`")
+
     #add to list of class injections
     classes = search_for_classes(pre_file, pre_file)
     class_injections.extend(classes)
@@ -426,9 +430,11 @@ def make_classes(fil, output_file, folder, args, logger):
     #evaluate injections
     pass2_file = os.path.join(folder, 'pass2-' + os.path.basename(fil))
     run_gpp(pass1_file, pass2_file, args, logger)
+
     #remove leftover "`" characters from kransw_macros
     # *** see docstring for details
     remove_char(pass2_file, "`")
+
     #do final gpp pass
     run_gpp(pass2_file, output_file, args, logger)
     remove_blank_lines(output_file)
