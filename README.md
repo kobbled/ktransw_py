@@ -1,5 +1,4 @@
 # ktransw
-v0.2.4
 
 A wrapper around Fanuc Robotics' command-line Karel translator (`ktrans.exe`)
 that makes it work a little more like a modern compiler by adding some missing
