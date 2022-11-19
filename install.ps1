@@ -1,16 +1,31 @@
 function ktransw_install {
+    Write-Output "Installing ktransw ..."
 
     #install python dependencies
-    python -m pip install -r requirements.txt
+    pip3 install -r "$PSScriptRoot\requirements.txt"
 
     #add ktransw to path
-    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "$PWD" + ";" + "$PWD" + "\deps\gpp", "User");
-    Write-Output "Added to Path: $PWD"
-    Write-Output "Added to Path: $PWD\deps\gpp"
+    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "$PSScriptRoot" + ";" + "$PSScriptRoot" + "\deps\gpp", "User");
+    Write-Output "Added to Path: $PSScriptRoot"
+    Write-Output "Added to Path: $PSScriptRoot\deps\gpp"
 
-    }
+}
+
+#python environment
+$penv=$args[0]
+
+if ($penv) {
+    $pactivate = $penv + "\Scripts\Activate.ps1"
+    Write-Output $pactivate
+    Invoke-Expression -Command $pactivate
+}
 
 #update pip
-python -m pip install --upgrade pip
-#run install
+pip3 install --upgrade pip
+
+#run ktransw install
 ktransw_install
+
+if ($penv) {
+    deactivate
+}
