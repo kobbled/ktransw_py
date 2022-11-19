@@ -11,20 +11,19 @@ As of v0.2.4 support for FANUC dictionaries and forms has been added to support 
 
 ## Requirements
 
-`ktransw` is written in Python 3, so naturally it needs a Python 3 install.
+`ktransw` was written in Python 3. Python dependencies can be installed with
+```python
+pip install -r requirements.txt
+```
 
 The script itself doesn't do any translation, so a copy of `ktrans.exe` (and
 related libraries) is also needed.
 
-Finally, pre-processing is handled by a patched version of Tristan Miller's
-GPP (the "Generic PreProcessor").
-
-
 ## Installation
 
-1. Install Python
-2. Clone the repo `git clone https://github.com/kobbled/ktransw_py`
-3. (optional) Create a python virtual environment `python -m venv <name>`
+1. Install Git & Python
+2. (optional) Create a python virtual environment `python -m venv <name>`
+3. Clone the repo `git clone https://github.com/kobbled/ktransw_py` to a user specified directory. If using an python virtual environment this can be cloned within your venv is you so choose.
 4. Run the install file in a powershell terminal, with the optional argument specifying the path to your created venv.
 ```powershell
 . ./install.ps1 <path\to\venv>
@@ -46,6 +45,9 @@ If `ktransw`, and `kcdictw`it is not on the `PATH`, its location must be provide
 
 </br>
 
+### GPP Preprocessor
+
+`ktransw` relies heavily on the [GPP Preprocessor](https://github.com/logological/gpp). If the supplied **.exe** file does not work on your machine, or if it needs to be upgraded, please follow the compilation guide for windows: [./deps/gpp/WINDOWS_SOURCE_BUILD_README.md](./deps/gpp/WINDOWS_SOURCE_BUILD_README.md)
 
 ## Usage
 
