@@ -22,33 +22,32 @@ GPP (the "Generic PreProcessor").
 
 ## Installation
 
-Clone this repository to your machine (or download any of the [releases][])
-and add the directory containing `ktransw.py`/`ktransw.cmd` and `kcdictw.py`/`kcdictw.cmd` to your `PATH`.
-Command sessions opened after setting up the `PATH` should be able to
-successfully run `ktransw` from anywhere.
+1. Clone the repo `git clone https://github.com/kobbled/ktransw_py`
+2. Install python
+3. Install python dependencies `python -m pip install -r requirements.txt`
+4. Add the `./deps/gpp/gpp.exe` to your path 
+  ```
+    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\path\to\ktransw_py\deps\gpp", "Machine")
+  ```
+  Alternatively you can move `gpp.exe` to somewhere that is already visible to your Path. Or you can compile you own .exe file from the [GPP source](https://github.com/logological/gpp), with the instructions found here ([./deps/gpp/WINDOWS_SOURCE_BUILD_README.md](./deps/gpp/WINDOWS_SOURCE_BUILD_README.md)).
 
-Alternatively, don't change your `PATH`, but start `ktransw` by specifying
-the full path on the command line.
+5. Add the root folder where `ktransw`, `kcdictw` is located to your path 
+  ```
+    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\path\to\ktransw_py", "Machine")
+  ```
 
-For maximum convenience, make sure that `ktrans.exe` is also on the `PATH`.
-`ktransw` does not try to locate `ktrans.exe` on its own, so if it is not
-on the `PATH`, its location must be provided by using the `--ktrans` command
-line option with each invocation.
+Alternatively a convenience distribution for [Rossum](https://github.com/kobbled/rossum), which includes `ktransw` can be downloaded from https://github.com/kobbled/rossum/releases.
 
-Download the latest binary release from [gpp releases][], and place it on
-the `PATH`. If `gpp.exe` cannot be placed on the path, the `--gpp` command
-line option may be used to tell `ktransw` where it is.
+If `ktransw`, and `kcdictw`it is not on the `PATH`, its location must be provided by using the `--ktrans` command line option with each invocation.
 
-| :warning: WARNING          |
-|:---------------------------|
 
-On windows machines the `python` alias can be overwritten by the py launcher where python is started in the terminal with `py -3`. The batch files are written with the `python` key. To create the alias type this into powershell:
 
-```powershell
-Set-Alias -Name python -Value "path\to\Python\Python39\python.exe"
-```
-
-replacing the value with the full path to the python executable in your PATH environment variables.
+> [!**WARNING**]
+> On windows machines the `python` alias can be overwritten by the py launcher where python is started in the terminal with `py -3`. The batch files are written with the `python` key. To create the alias type this into powershell:
+> ```powershell
+> Set-Alias -Name python -Value "path\to\Python\Python39\python.exe"
+> ```
+> replacing the value with the full path to the python executable in your PATH environment variables.
 
 
 ## Usage
