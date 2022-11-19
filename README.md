@@ -22,32 +22,29 @@ GPP (the "Generic PreProcessor").
 
 ## Installation
 
-1. Clone the repo `git clone https://github.com/kobbled/ktransw_py`
-2. Install python
-3. Install python dependencies `python -m pip install -r requirements.txt`
-4. Add the `./deps/gpp/gpp.exe` to your path 
-  ```
-    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\path\to\ktransw_py\deps\gpp", "Machine")
-  ```
-  Alternatively you can move `gpp.exe` to somewhere that is already visible to your Path. Or you can compile you own .exe file from the [GPP source](https://github.com/logological/gpp), with the instructions found here ([./deps/gpp/WINDOWS_SOURCE_BUILD_README.md](./deps/gpp/WINDOWS_SOURCE_BUILD_README.md)).
+1. Install Python
+2. Clone the repo `git clone https://github.com/kobbled/ktransw_py`
+3. (optional) Create a python virtual environment `python -m venv <name>`
+4. Run the install file in a powershell terminal, with the optional argument specifying the path to your created venv.
+```powershell
+. ./install.ps1 <path\to\venv>
+```
 
-5. Add the root folder where `ktransw`, `kcdictw` is located to your path 
-  ```
-    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\path\to\ktransw_py", "Machine")
-  ```
-
-Alternatively a convenience distribution for [Rossum](https://github.com/kobbled/rossum), which includes `ktransw` can be downloaded from https://github.com/kobbled/rossum/releases.
+Alternatively a convenience distribution for [Rossum](https://github.com/kobbled/rossum) can be downloaded and installed, which includes `ktransw`. Goto https://github.com/kobbled/rossum/releases for details.
 
 If `ktransw`, and `kcdictw`it is not on the `PATH`, its location must be provided by using the `--ktrans` command line option with each invocation.
 
+</br>
 
-
-> [!**WARNING**]
+> [!**NOTE**]
+>
 > On windows machines the `python` alias can be overwritten by the py launcher where python is started in the terminal with `py -3`. The batch files are written with the `python` key. To create the alias type this into powershell:
 > ```powershell
 > Set-Alias -Name python -Value "path\to\Python\Python39\python.exe"
 > ```
 > replacing the value with the full path to the python executable in your PATH environment variables.
+
+</br>
 
 
 ## Usage
