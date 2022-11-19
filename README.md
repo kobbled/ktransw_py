@@ -42,10 +42,12 @@ If `ktransw`, and `kcdictw`it is not on the `PATH`, its location must be provide
 
 ## Requirements
 
-`ktransw` was written in Python 3. Python dependencies can be installed with
+**ktransw** was written in Python 3. Python dependencies can be installed with
 ```python
 pip install -r requirements.txt
 ```
+
+Add the _./bin_ directory of **ktransw** to your environment `Path`
 
 The script itself requires the the Fanuc tool **ktrans.exe** to compile the code into a binary form for the robot controller to read. **ktrans.exe** should be installed with a copy of **Roboguide** or **OLPCPro**. The standard location of the Fanuc tools is `C:\Program Files (x86)\FANUC\WinOLPC\bin`. Make sure this is on your environment `Path` if you run into troubles.
 
