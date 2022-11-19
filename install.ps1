@@ -5,8 +5,8 @@ function ktransw_install {
     pip3 install -r "$PSScriptRoot\requirements.txt"
 
     #add ktransw to path
-    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "$PSScriptRoot" + ";" + "$PSScriptRoot" + "\deps\gpp", "User");
-    Write-Output "Added to Path: $PSScriptRoot"
+    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";" + "$PSScriptRoot\bin" + ";" + "$PSScriptRoot\deps\gpp", "User");
+    Write-Output "Added to Path: $PSScriptRoot\bin"
     Write-Output "Added to Path: $PSScriptRoot\deps\gpp"
 
 }
