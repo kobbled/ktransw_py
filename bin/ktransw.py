@@ -71,6 +71,9 @@ def main():
         help='Print nothing, except when ktrans encounters an error')
     parser.add_argument('-d', '--dry-run', action='store_true', dest='dry_run',
         help='Do nothing, except checking parameters')
+    parser.add_argument('-r', '--remove-name-length', action='store_true', dest='replace_long_names',
+        help="Remove character length limitation, by autogenerating an abbreviated name, "
+             "and replacing occurances of the name in the file.")
 
     parser.add_argument('-E', action='store_true', dest='output_ppd_source',
         help="Preprocess only; do not translate")
@@ -435,8 +438,18 @@ def make_classes(fil, output_file, folder, args, logger):
     # *** see docstring for details
     remove_char(pass2_file, "`")
 
+    # #replace variables and constants with character lengths
+    # #greater than 12, with a 8 char hash.
+    if args.replace_long_names:
+      vars = {}
+      getVars(pass2_file, vars)
+      pass3_file = os.path.join(folder, 'pass3-' + os.path.basename(fil))
+      addVarList(pass2_file, vars, pass3_file)
+    else:
+      pass3_file = pass2_file
+
     #do final gpp pass
-    run_gpp(pass2_file, output_file, args, logger)
+    run_gpp(pass3_file, output_file, args, logger)
     remove_blank_lines(output_file)
 
     #append processed file to ktrans list
@@ -791,6 +804,71 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs, macro_strs):
 
     return gpp_cmdline
 
+
+def shortenName(name):
+  """Shortens a name to 8 characters, and adds a 4 char hash to the end to make it unique."""
+  import hashlib
+
+  hashObject = hashlib.md5(name.encode())
+  return name[0:min(len(name),8)] + '_' + hashObject.hexdigest()[0:3]
+
+def getVars(inpt, var_list):
+  """Gets the variables and constants from the input file."""
+  from itertools import chain
+
+  with open(inpt, "r") as file:
+
+    inputString = file.read()
+
+    # prog name
+    progName = re.search(r'^[\t ]*PROGRAM[\t ]*(.*)?', inputString, re.M)
+    if progName:
+      if (len(progName.group(1)) > 12):
+        var_list[progName.group(1)] = shortenName(progName.group(1))
+    
+    # routines
+    routine_matches = re.finditer(r"[^\t\s]*ROUTINE[\t\s]*(\w+)[\t\s]*(?:FROM[\t\s]*\w+)?[\(\:\n]", inputString)
+    if (routine_matches):
+      for match in routine_matches:
+        if (len(match.group(1)) > 12):
+          var_list[match.group(1)] = shortenName(match.group(1))
+
+    # structs
+    #   Find any structure names
+    struct_matches = re.finditer(r"[\t\s]*(\w+)[\t\s]*(?:FROM[\t\s]*\w+)?[\t\s]*=[\t\s]*(?:STRUCTURE)", inputString)
+    if (struct_matches):
+      for match in struct_matches:
+        if (len(match.group(1)) > 12):
+          var_list[match.group(1)] = shortenName(match.group(1))
+
+    #   Find any structure variables
+    struct_var_matches = re.finditer(r"(?s)(?<=TYPE)(.*?)(?:(?=VAR|CONST|TYPE|ROUTINE|BEGIN))", inputString)
+
+    # vars and consts
+    var_matches = re.finditer(r"(?s)(?<=VAR)(.*?)(?:(?=VAR|CONST|TYPE|ROUTINE|BEGIN))", inputString)
+    const_matches = re.finditer(r"(?s)(?<=CONST)(.*?)(?:(?=VAR|CONST|TYPE|ROUTINE|BEGIN))", inputString)
+    
+    for match in chain(var_matches, const_matches, struct_var_matches):
+      lines = match.group()
+      lines = lines.splitlines()
+
+      for line in lines:
+        found_var = re.search(r'^[\t ]*(\w+)[\t ][=|:][\t ](\w+)', line)
+        if (found_var):
+          if (len(found_var.group(1)) > 12):
+            var_list[found_var.group(1)] = shortenName(found_var.group(1))
+
+def addVarList(inpt, vars, outpt):
+  """Adds the variable list to the pass2 file."""
+  gpp_input = ""
+  for var in vars:
+    #get var key and value
+    key = var
+    value = vars[var]
+    gpp_input += "%define {} {}\n".format(key, value)
+
+  with open(outpt, 'w') as file: 
+    file.write(gpp_input + open(inpt, 'r').read())
 
 class TemporaryDirectory(object):
     # http://stackoverflow.com/a/19299884
