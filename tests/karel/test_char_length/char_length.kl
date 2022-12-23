@@ -1,0 +1,133 @@
+PROGRAM character_length
+
+TYPE
+  TABLE_PARAMETERS = STRUCTURE
+    table_dimensions : VECTOR
+    table_position : VECTOR
+    table_orientation : VECTOR
+  ENDSTRUCTURE
+
+  PART_DIMENSIONS = STRUCTURE
+    position_on_table : VECTOR
+    orientation_relative_to_table : VECTOR
+    width_mm : REAL
+    length_mm : REAL
+    height_mm : REAL
+  ENDSTRUCTURE
+
+CONST
+  table_height_mm = 800
+  table_width_mm = 300
+  table_length_mm = 500
+  table_x_distance_from_robot = 500
+  table_y_distance_from_robot = 500
+
+  part_width_mm = 200
+  part_length_mm = 200
+  part_height_mm = 50
+
+VAR
+  --user sets
+  table : TABLE_PARAMETERS
+  part : PART_DIMENSIONS
+  robot_perch_above_part : REAL
+
+  --program sets
+  part_ready_for_scanning : BOOLEAN
+  perch_position : XYZWPR
+  pickup_position : XYZWPR
+
+ROUTINE set_config(conf_str : STRING) : CONFIG
+  VAR
+    cnfg : CONFIG
+    STATUS : INTEGER
+  BEGIN
+    CNV_STR_CONF(conf_str, cnfg, STATUS)
+    RETURN(cnfg)
+  END set_config
+
+ROUTINE VEC(x,y,z : REAL) : VECTOR
+  VAR
+    v : VECTOR
+  BEGIN
+    v.x = x; v.y = y; v.z = z;
+    RETURN(v)
+  END VEC
+
+ROUTINE get_table_position : XYZWPR
+  VAR
+    position_plus_height : VECTOR
+  BEGIN
+    position_plus_height = table.table_position+VEC(0, 0, table.table_dimensions.z)
+
+    RETURN(POS(position_plus_height.x, position_plus_height.y, position_plus_height.z, &
+               table.table_orientation.x, table.table_orientation.y, table.table_orientation.z, &
+               set_config('N B D, 0, 0, 0')))
+  END get_table_position
+
+ROUTINE get_part_position : XYZWPR
+  BEGIN
+    RETURN(POS(part.position_on_table.x, part.position_on_table.y, part.position_on_table.z + part.height_mm, &
+               part.orientation_relative_to_table.x, part.orientation_relative_to_table.y, part.orientation_relative_to_table.z, &
+               set_config('N B D, 0, 0, 0')))
+  END get_part_position
+
+ROUTINE get_perch_position_relative_to_part : XYZWPR
+  BEGIN
+    RETURN(POS((part.width_mm/2),(part.length_mm/2),robot_perch_above_part,0,0,0, set_config('N B D, 0, 0, 0')))
+  END get_perch_position_relative_to_part
+
+ROUTINE set_uninitialized
+  BEGIN
+    IF UNINIT(part.position_on_table) THEN
+      part.position_on_table.x = 0
+      part.position_on_table.y = 0
+      part.position_on_table.z = 0
+    ENDIF
+
+    IF UNINIT(part.orientation_relative_to_table) THEN
+      part.orientation_relative_to_table.x = 0
+      part.orientation_relative_to_table.y = 0
+      part.orientation_relative_to_table.z = 0
+    ENDIF
+
+    IF UNINIT(part.width_mm) THEN part.width_mm = part_width_mm ; ENDIF
+    IF UNINIT(part.length_mm) THEN part.length_mm = part_length_mm ; ENDIF
+    IF UNINIT(part.height_mm) THEN part.height_mm = part_height_mm ; ENDIF
+
+    IF UNINIT(table.table_dimensions) THEN
+      table.table_dimensions.x = table_width_mm
+      table.table_dimensions.y = table_length_mm
+      table.table_dimensions.z = table_height_mm
+    ENDIF
+
+    IF UNINIT(table.table_position) THEN
+      table.table_position.x = table_x_distance_from_robot
+      table.table_position.y = table_y_distance_from_robot
+      table.table_position.z = 0
+    ENDIF
+
+    IF UNINIT(table.table_orientation) THEN
+      table.table_orientation.x = 0
+      table.table_orientation.y = 0
+      table.table_position.z = 0
+    ENDIF
+  END set_uninitialized
+
+BEGIN
+  --lock guard to block motion program
+  part_ready_for_scanning = FALSE
+
+  --initialize any uninitialized values
+  set_uninitialized
+
+  --create position for part on table
+  pickup_position = get_table_position:get_part_position
+
+  --create perch position
+  perch_position = pickup_position:get_perch_position_relative_to_part
+
+  --unlock guard for motion program to run
+  part_ready_for_scanning = TRUE
+
+END character_length
