@@ -806,14 +806,16 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs, macro_strs):
 
 
 def shortenName(name):
-  """Shortens a name to 8 characters, and adds a 4 char hash to the end to make it unique."""
+  """Shortens a name to 8 characters, and adds a 4 char hash to the end to make it unique.
+  function was taken from https://github.com/jdexyz/karelPreprocessor/blob/master/preprocessor.py"""
   import hashlib
 
   hashObject = hashlib.md5(name.encode())
   return name[0:min(len(name),8)] + '_' + hashObject.hexdigest()[0:3]
 
 def getVars(inpt, var_list):
-  """Gets the variables and constants from the input file."""
+  """Gets the variables and constants from the input file.
+  Credit to @jdexyz, and the https://github.com/jdexyz/karelPreprocessor repo."""
   from itertools import chain
 
   with open(inpt, "r") as file:
