@@ -91,3 +91,6 @@ Interpreter/
 GPATH
 GRTAGS
 GTAGS
+
+*.code-workspace
+*desktop.ini
