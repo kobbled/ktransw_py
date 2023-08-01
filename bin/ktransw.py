@@ -491,7 +491,7 @@ def create_object_hdr(obj, fname):
       f.write(r"%include {0}".format(obj[3]) + '\n')
 
 def insert_headers(fname, header_injections, objects):
-    pattern = r"(?:--\s*INCLUDE_MARKER\s*(\d+)\:({0})+\:1)".format('|'.join([obj[1] for obj in objects]))
+    pattern = r"(?:--\s*INCLUDE_MARKER\s*(\d+)\:(\w+)\:1)".format('|'.join([obj[1] for obj in objects]))
 
     with open(fname,"r+") as f:
       lines = f.readlines()
