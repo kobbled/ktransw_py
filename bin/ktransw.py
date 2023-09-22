@@ -501,7 +501,8 @@ def insert_headers(fname, header_injections, objects):
           for obj in objects:
             if str(obj[0]) == m.group(1) and obj[1] == m.group(2):
               #find associating header file
-              fle = [hdr for hdr in header_injections if (m.group(2) in os.path.basename(hdr))][0]
+              search = m.group(2) + '.klh'
+              fle = [hdr for hdr in header_injections if (search in os.path.basename(hdr))][0]
               if not fle:
                 raise Exception('header file {0} was not created'.format(m.group(2)))
               with open(fle,"r") as h:
