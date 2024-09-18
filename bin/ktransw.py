@@ -753,7 +753,7 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs, macro_strs):
         '""',       # and finally the quote character (escapes embedded string chars)
 
         '-M',       # User-defined mode specifications for meta-macros
-        '"\\n%\w"', # the macro start sequence
+        '"\\n%\\w"', # the macro start sequence
         '"\\n"',    # the macro end sequence for a call without arguments
         '" "',      # the argument start sequence
         '" "',      # the argument separator
