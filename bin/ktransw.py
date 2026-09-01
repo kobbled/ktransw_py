@@ -50,6 +50,14 @@ class_injections = []
 #list to store header injections
 header_injections = []
 
+def default_gpp_path():
+    """Return the bundled GPP executable when it is available."""
+    bundled_gpp = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), '..', 'deps', 'gpp',
+        GPP_BIN_NAME)
+    bundled_gpp = os.path.abspath(bundled_gpp)
+    return bundled_gpp if os.path.isfile(bundled_gpp) else GPP_BIN_NAME
+
 def main():
 
     description=("Version {0}\n\n"
@@ -132,9 +140,8 @@ def main():
     ktrans_path = os.path.abspath(args.ktrans_path) if args.ktrans_path else KTRANS_BIN_NAME
     logger.debug("Setting ktrans path to: {0}".format(ktrans_path))
 
-    # we expect gpp to be on the path. If it's not, user should have
-    # provided an alternative location
-    gpp_path = os.path.abspath(args.gpp_path) if args.gpp_path else GPP_BIN_NAME
+    # Prefer the packaged GPP so builds work without a global PATH update.
+    gpp_path = os.path.abspath(args.gpp_path) if args.gpp_path else default_gpp_path()
     logger.debug("Setting gpp path to: {0}".format(gpp_path))
 
 
@@ -304,7 +311,7 @@ def remove_blank_lines(fname):
       inf.truncate()
 
 def run_gpp(inpt, outpt, args, logger):
-    gpp_path = os.path.abspath(args.gpp_path) if args.gpp_path else GPP_BIN_NAME
+    gpp_path = os.path.abspath(args.gpp_path) if args.gpp_path else default_gpp_path()
     # do actual pre-processing
     logger.debug("Starting pre-processing of {}".format(inpt))
 
@@ -734,8 +741,10 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs, macro_strs):
     #
     # Maybe make it an option? ie: --ktrans-bw
 
+    # run_gpp joins these arguments into a Windows command line. Quote the
+    # executable itself because the bundled path commonly contains spaces.
     gpp_cmdline = [
-        gpp_exe,
+        '"{0}"'.format(gpp_exe) if ' ' in gpp_exe else gpp_exe,
 
         '+z',       # Set text mode to Unix mode (LF terminator)
 

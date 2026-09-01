@@ -46,6 +46,14 @@ dict_files = []
 #list to store header injections
 header_injections = []
 
+def default_gpp_path():
+  """Return the bundled GPP executable when it is available."""
+  bundled_gpp = os.path.join(
+      os.path.dirname(os.path.abspath(__file__)), '..', 'deps', 'gpp',
+      GPP_BIN_NAME)
+  bundled_gpp = os.path.abspath(bundled_gpp)
+  return bundled_gpp if os.path.isfile(bundled_gpp) else GPP_BIN_NAME
+
 def main():
   """Shell wrapper for compressing .utx of .ftx files in a rossum environment
   """
@@ -90,9 +98,8 @@ def main():
   # provided an alternative location
   kcdict_path = os.path.abspath(args.kcdict_path) if args.kcdict_path else KCDICT_BIN_NAME
 
-  # we expect gpp to be on the path. If it's not, user should have
-  # provided an alternative location
-  gpp_path = os.path.abspath(args.gpp_path) if args.gpp_path else GPP_BIN_NAME
+  # Prefer the packaged GPP so builds work without a global PATH update.
+  gpp_path = os.path.abspath(args.gpp_path) if args.gpp_path else default_gpp_path()
 
   # extract args which refer to KAREL sources: we can just search for
   # arguments with '.kl' in it, as ktrans only considers files with that
@@ -192,7 +199,7 @@ def remove_blank_lines(fname):
 
 
 def run_gpp(inpt, outpt, args):
-    gpp_path = os.path.abspath(args.gpp_path) if args.gpp_path else GPP_BIN_NAME
+    gpp_path = os.path.abspath(args.gpp_path) if args.gpp_path else default_gpp_path()
     # do actual pre-processing
 
     # setup command line for gpp
@@ -316,13 +323,12 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs):
     #
     # Maybe make it an option? ie: --ktrans-bw
 
+    # run_gpp joins these arguments into a Windows command line. Quote the
+    # executable itself because the bundled path commonly contains spaces.
     gpp_cmdline = [
-        gpp_exe,
+        '"{0}"'.format(gpp_exe) if ' ' in gpp_exe else gpp_exe,
 
         '+z',       # Set text mode to Unix mode (LF terminator)
-
-        '--includemarker "* INCLUDE_MARKER %:%:%"',
-                    # line:file:op
 
         '-U',       # User-defined mode
         '""',       # the macro start sequence
@@ -336,7 +342,7 @@ def setup_gpp_cline(gpp_exe, src_file, dest_file, include_dirs):
         '""',       # and finally the quote character (escapes embedded string chars)
 
         '-M',       # User-defined mode specifications for meta-macros
-        '"\\n#\w"', # the macro start sequence
+        '"\\n#\\w"', # the macro start sequence
         '"\\n"',    # the macro end sequence for a call without arguments
         '" "',      # the argument start sequence
         '" "',      # the argument separator

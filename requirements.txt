@@ -1,2 +1,6 @@
-lark==0.11.3
-PyYAML==6.0
+# The 0.11.3 distribution predates Python 3.14.  The project does not import
+# Lark directly, and the main project supports modern Lark releases.
+lark>=0.11.3
+# PyYAML 6.0 has no Python 3.14 wheel and cannot be built with current tooling.
+# 6.0.3 provides prebuilt Python 3.14 wheels while remaining API-compatible.
+PyYAML>=6.0.3,<7
